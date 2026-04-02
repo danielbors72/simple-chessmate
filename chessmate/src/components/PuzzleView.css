@@ -1,0 +1,114 @@
+/* PuzzleView — lista de puzzle-uri, în chenatul negru ca board-ul */
+.puzzle-view {
+  width: min(92vw, 520px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 3px solid #222;
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* Statistici progres */
+.puzzle-stats {
+  text-align: center;
+  font-size: 0.82rem;
+  color: #666;
+  letter-spacing: 0.3px;
+}
+
+/* Filtre */
+.puzzle-filters {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.puzzle-filters select {
+  background: transparent;
+  color: #666;
+  border: 1px solid #333;
+  border-radius: 3px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.puzzle-filters select option {
+  background: #1a1a1a;
+  color: #ccc;
+}
+
+/* Lista */
+.puzzle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.puzzle-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.puzzle-list::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+/* Card puzzle */
+.puzzle-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: #333;
+  transition: background 0.15s;
+}
+
+.puzzle-card:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.puzzle-card.solved {
+  opacity: 0.6;
+}
+
+.puzzle-id {
+  font-size: 0.7rem;
+  color: #888;
+  min-width: 28px;
+}
+
+.puzzle-title {
+  flex: 1;
+}
+
+.puzzle-meta {
+  font-size: 0.68rem;
+  color: #888;
+  white-space: nowrap;
+}
+
+.puzzle-check {
+  color: #2a7;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.puzzle-empty {
+  text-align: center;
+  color: #888;
+  font-size: 0.82rem;
+  padding: 24px 0;
+}
