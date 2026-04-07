@@ -50,3 +50,23 @@
   color: #f0b828;
   border-color: #222;
 }
+
+/* Footer — etichetă discretă */
+.app-footer {
+  position: fixed;
+  bottom: 52px;
+  right: 10px;
+  z-index: 99;
+}
+
+.app-footer a {
+  font-size: 0.6rem;
+  color: rgba(0, 0, 0, 0.3);
+  text-decoration: none;
+  letter-spacing: 0.3px;
+  transition: color 0.2s;
+}
+
+.app-footer a:hover {
+  color: rgba(0, 0, 0, 0.6);
+}

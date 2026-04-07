@@ -28,6 +28,12 @@ function App() {
           Puzzle-uri
         </button>
       </nav>
+
+      <footer className="app-footer">
+        <a href="https://darbun.pro" target="_blank" rel="noopener noreferrer">
+          darbun.pro
+        </a>
+      </footer>
     </div>
   )
 }
