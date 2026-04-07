@@ -9,6 +9,7 @@
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  position: relative;
 }
 
 /* Pătratele tablei */
@@ -73,4 +74,40 @@
   inset: 4%;
   border-radius: 50%;
   border: 4px solid rgba(0, 0, 0, 0.15);
+}
+
+/* SVG overlay pentru săgeata ultimei mutări */
+.move-arrow-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Piesa animată — zboară de la sursă la destinație */
+.animating-piece {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+  left: var(--from-x);
+  top: var(--from-y);
+  transition: none;
+}
+
+.animating-piece.animate-to {
+  left: var(--to-x);
+  top: var(--to-y);
+  transition: left 0.45s ease-out, top 0.45s ease-out;
+}
+
+.animating-piece .piece {
+  width: 88%;
+  height: 88%;
 }
