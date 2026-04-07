@@ -9,6 +9,10 @@ const ENGINE_STORIES: Record<string, { size: string; fact: string }> = {
     size: '~150 MB (WASM)',
     fact: 'Cel mai puternic motor open-source. Evaluare cu rețea neuronală NNUE, milioane de poziții pe secundă.',
   },
+  'Microchess': {
+    size: '924 bytes 6502 Assembly',
+    fact: 'Primul joc comercial pe microcomputer (1976). Peter Jennings l-a vândut prin poștă — 50.000 copii pe KIM-1.',
+  },
   'Sargon I': {
     size: '~4 KB Assembly Z-80',
     fact: 'În 1978, a învins supercalculatorul Amdahl 470 — un eveniment care a făcut prima pagină a ziarelor.',
@@ -16,6 +20,10 @@ const ENGINE_STORIES: Record<string, { size: string; fact: string }> = {
   '1K ZX Chess': {
     size: '672 bytes',
     fact: 'Tot programul, inclusiv interfața, încape în 672 bytes. ZX81 avea doar 1KB RAM în total.',
+  },
+  'TSCP': {
+    size: '~1.000 linii C',
+    fact: 'Tom Kerrigan\'s Simple Chess Program — manualul de învățare al unei generații de programatori de șah.',
   },
   'p4wn': {
     size: '~5 KB JavaScript',
@@ -44,7 +52,7 @@ function EngineGallery() {
   return (
     <div className="engine-gallery">
       <h2 className="gallery-title">motoare de șah</h2>
-      <p className="gallery-subtitle">de la 672 bytes la rețele neuronale — 47 ani de evoluție</p>
+      <p className="gallery-subtitle">de la 924 bytes la rețele neuronale — 48 ani de evoluție</p>
 
       {/* Timeline vizual */}
       <div className="timeline">

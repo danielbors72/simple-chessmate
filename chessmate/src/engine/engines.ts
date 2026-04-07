@@ -14,18 +14,22 @@ export interface ChessEngine {
 
 // Importăm motoarele disponibile (lazy — fiecare fișier exportă o instanță)
 import { stockfishEngine } from './stockfishEngine'
-import { toledoEngine } from './toledoEngine'
-import { p4wnEngine } from './p4wnEngine'
-import { microMaxEngine } from './microMaxEngine'
+import { microchessEngine } from './microchessEngine'
 import { sargonEngine } from './sargonEngine'
 import { spectrumEngine } from './spectrumEngine'
+import { tscpEngine } from './tscpEngine'
+import { p4wnEngine } from './p4wnEngine'
+import { toledoEngine } from './toledoEngine'
+import { microMaxEngine } from './microMaxEngine'
 import { randomEngine } from './randomEngine'
 
 // Registrul motoarelor — ordinea cronologică = ordinea în UI
 export const ENGINES: ChessEngine[] = [
   stockfishEngine,
+  microchessEngine,
   sargonEngine,
   spectrumEngine,
+  tscpEngine,
   p4wnEngine,
   toledoEngine,
   microMaxEngine,
