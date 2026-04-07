@@ -1,22 +1,15 @@
-// Board.tsx — Tabla de șah interactivă cu AI
-// Albul = jucătorul, Negrul = Stockfish
+// Board.tsx — Tabla de șah interactivă cu motoare selectabile
+// Albul = jucătorul, Negrul = motorul ales
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Chess, type Square as Sq } from 'chess.js'
-import engine from '../engine/stockfish'
+import { ENGINES, DEFAULT_ENGINE, type ChessEngine } from '../engine/engines'
 import Square from './Square'
 import GameInfo from './GameInfo'
 import './Board.css'
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 const RANKS = [8, 7, 6, 5, 4, 3, 2, 1]
-
-// Nivelele de dificultate — depth = cât de adânc gândește Stockfish
-const DIFFICULTY: Record<string, number> = {
-  easy: 3,      // ~800 ELO — face greșeli evidente
-  medium: 8,    // ~1400 ELO — joc decent
-  hard: 15,     // ~2000+ ELO — foarte puternic
-}
 
 function toPieceCode(piece: { color: string; type: string }): string {
   return piece.color + piece.type.toUpperCase()
@@ -39,27 +32,36 @@ function Board() {
   const [selected, setSelected] = useState<string | null>(null)
   const [legalMoves, setLegalMoves] = useState<string[]>([])
   const [history, setHistory] = useState<string[]>([])
-  const [difficulty, setDifficulty] = useState<string>('medium')
   const [thinking, setThinking] = useState(false)
+
+  // Motor curent + nivel de dificultate
+  const [engine, setEngine] = useState<ChessEngine>(DEFAULT_ENGINE)
+  const [difficultyIndex, setDifficultyIndex] = useState(1) // index în engine.difficulty[]
+  const engineRef = useRef(engine)
 
   const gameOver = game.isGameOver()
   const inCheck = game.inCheck()
   const kingSquare = inCheck ? findKingSquare(game) : null
   const isPlayerTurn = game.turn() === 'w'
 
-  // Pornește motorul la prima încărcare
+  // Pornește motorul la prima încărcare + la schimbare motor
   useEffect(() => {
+    engineRef.current = engine
     engine.init()
     return () => engine.destroy()
-  }, [])
+  }, [engine])
 
-  // Când e rândul negrului (AI), cere mutare de la Stockfish
+  // Când e rândul negrului (AI), cere mutare de la motor
   useEffect(() => {
     if (!isPlayerTurn && !gameOver) {
       setThinking(true)
-      const depth = DIFFICULTY[difficulty]
-      engine.findBestMove(game.fen(), depth, (bestMove) => {
-        // bestMove vine ca "e7e5" — trebuie split în from/to
+      const currentEngine = engineRef.current
+      const level = currentEngine.difficulty[difficultyIndex]?.value ?? currentEngine.difficulty[0].value
+
+      currentEngine.findBestMove(game.fen(), level).then((bestMove) => {
+        // Verificăm că nu s-a schimbat motorul între timp
+        if (engineRef.current !== currentEngine) return
+
         const from = bestMove.slice(0, 2)
         const to = bestMove.slice(2, 4)
         const promotion = bestMove.length > 4 ? bestMove[4] : undefined
@@ -73,10 +75,26 @@ function Board() {
         setThinking(false)
       })
     }
-  }, [game, isPlayerTurn, gameOver, difficulty])
+  }, [game, isPlayerTurn, gameOver, difficultyIndex])
+
+  // Schimbă motorul — resetează jocul pentru consistență
+  const handleEngineChange = useCallback((engineName: string) => {
+    const newEngine = ENGINES.find(e => e.name === engineName)
+    if (!newEngine || newEngine === engine) return
+
+    // Oprim motorul vechi
+    engine.destroy()
+
+    setEngine(newEngine)
+    setDifficultyIndex(0)
+    setGame(new Chess())
+    setSelected(null)
+    setLegalMoves([])
+    setHistory([])
+    setThinking(false)
+  }, [engine])
 
   const handleSquareClick = useCallback((position: string) => {
-    // Nu acceptăm click-uri când e rândul AI-ului sau jocul s-a terminat
     if (gameOver || !isPlayerTurn || thinking) return
 
     if (selected && legalMoves.includes(position)) {
@@ -116,7 +134,6 @@ function Board() {
   }, [])
 
   const handleUndo = useCallback(() => {
-    // La Undo, dăm înapoi 2 mutări (mutarea AI + mutarea jucătorului)
     if (history.length < 2) return
     const prevFen = history[history.length - 2]
     setGame(new Chess(prevFen))
@@ -157,8 +174,11 @@ function Board() {
         canUndo={history.length >= 2 && isPlayerTurn}
         onNewGame={handleNewGame}
         onUndo={handleUndo}
-        difficulty={difficulty}
-        onDifficultyChange={setDifficulty}
+        engine={engine}
+        engines={ENGINES}
+        onEngineChange={handleEngineChange}
+        difficultyIndex={difficultyIndex}
+        onDifficultyChange={setDifficultyIndex}
         thinking={thinking}
       />
     </div>
