@@ -11,8 +11,8 @@ const PIECE_VALUE: Record<string, number> = {
   p: 1, n: 3, b: 3, r: 5, q: 9, k: 100,
 }
 
-// Evaluare ultra-simplă: doar material, nimic pozițional
-// Pe ZX81 nu exista memorie pentru tabele poziționale
+// Evaluare ultra-simplă: material + bonus minimal centru
+// ZX81 avea o preferință rudimentară pentru controlul centrului
 function evaluate(game: Chess): number {
   const board = game.board()
   const turn = game.turn()
@@ -22,7 +22,12 @@ function evaluate(game: Chess): number {
     for (let file = 0; file < 8; file++) {
       const piece = board[rank][file]
       if (!piece) continue
-      const val = PIECE_VALUE[piece.type]
+      let val = PIECE_VALUE[piece.type]
+      // Bonus minimal centru — 3-4 bytes pe ZX81 pentru asta
+      if (piece.type !== 'k') {
+        const dc = Math.abs(file - 3.5) + Math.abs(rank - 3.5)
+        val += (7 - dc) * 0.05
+      }
       score += piece.color === turn ? val : -val
     }
   }

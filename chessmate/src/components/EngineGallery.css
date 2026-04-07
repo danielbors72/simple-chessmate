@@ -1,0 +1,137 @@
+/* Engine Gallery — timeline + cards */
+.engine-gallery {
+  width: min(92vw, 520px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 8px 0;
+}
+
+.gallery-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #222;
+  text-align: center;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.gallery-subtitle {
+  font-size: 0.72rem;
+  color: #555;
+  text-align: center;
+  margin: -12px 0 0;
+}
+
+/* Timeline */
+.timeline {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 8px;
+  min-height: 60px;
+}
+
+.timeline-line {
+  position: absolute;
+  top: 6px;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  background: #222;
+  opacity: 0.3;
+}
+
+.timeline-dot-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #222;
+  border: 2px solid #f0b828;
+}
+
+.timeline-year {
+  font-size: 0.62rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.timeline-name {
+  font-size: 0.55rem;
+  color: #555;
+  text-align: center;
+  max-width: 60px;
+  line-height: 1.2;
+}
+
+/* Cards */
+.engine-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.engine-card {
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.card-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #222;
+}
+
+.card-year {
+  font-size: 0.72rem;
+  color: #555;
+  font-weight: 600;
+}
+
+.card-author {
+  font-size: 0.68rem;
+  color: #666;
+}
+
+.card-size {
+  font-size: 0.68rem;
+  color: #444;
+  font-family: 'SF Mono', ui-monospace, monospace;
+}
+
+.card-fact {
+  font-size: 0.72rem;
+  color: #333;
+  line-height: 1.4;
+  margin: 2px 0 0;
+}
+
+.card-diff {
+  font-size: 0.62rem;
+  color: #777;
+  text-transform: lowercase;
+  letter-spacing: 0.3px;
+  margin-top: 2px;
+}

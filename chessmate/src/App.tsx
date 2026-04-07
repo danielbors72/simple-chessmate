@@ -3,16 +3,19 @@
 import { useState } from 'react'
 import Board from './components/Board'
 import PuzzleView from './components/PuzzleView'
+import EngineGallery from './components/EngineGallery'
 import './App.css'
 
-type View = 'play' | 'puzzles'
+type View = 'play' | 'puzzles' | 'engines'
 
 function App() {
   const [view, setView] = useState<View>('play')
 
   return (
     <div className="app">
-      {view === 'play' ? <Board /> : <PuzzleView />}
+      {view === 'play' && <Board />}
+      {view === 'puzzles' && <PuzzleView />}
+      {view === 'engines' && <EngineGallery />}
 
       <nav className="nav-tabs">
         <button
@@ -26,6 +29,12 @@ function App() {
           onClick={() => setView('puzzles')}
         >
           Puzzle-uri
+        </button>
+        <button
+          className={`nav-tab ${view === 'engines' ? 'active' : ''}`}
+          onClick={() => setView('engines')}
+        >
+          Motoare
         </button>
       </nav>
 
