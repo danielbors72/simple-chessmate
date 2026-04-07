@@ -17,13 +17,17 @@ import { stockfishEngine } from './stockfishEngine'
 import { toledoEngine } from './toledoEngine'
 import { p4wnEngine } from './p4wnEngine'
 import { microMaxEngine } from './microMaxEngine'
+import { sargonEngine } from './sargonEngine'
+import { spectrumEngine } from './spectrumEngine'
 import { randomEngine } from './randomEngine'
 
-// Registrul motoarelor — ordinea din array = ordinea în UI
+// Registrul motoarelor — ordinea cronologică = ordinea în UI
 export const ENGINES: ChessEngine[] = [
   stockfishEngine,
-  toledoEngine,
+  sargonEngine,
+  spectrumEngine,
   p4wnEngine,
+  toledoEngine,
   microMaxEngine,
   randomEngine,
 ]
