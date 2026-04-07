@@ -55,13 +55,15 @@ function GameInfo({
     <div className="game-info">
       <div className="status">{status}</div>
 
-      {/* Selector motor + info */}
-      <div className="engine-selector">
+      <div className="controls">
+        <button onClick={onUndo} disabled={!canUndo || thinking}>Undo</button>
+        <button onClick={onNewGame}>Joc nou</button>
+
+        {/* Selector motor — în rând cu butoanele */}
         <select
           value={engine.name}
           onChange={(e) => onEngineChange(e.target.value)}
           disabled={thinking}
-          className="engine-select"
         >
           {engines.map(e => (
             <option key={e.name} value={e.name}>
@@ -69,12 +71,6 @@ function GameInfo({
             </option>
           ))}
         </select>
-        <span className="engine-desc">{engine.description}</span>
-      </div>
-
-      <div className="controls">
-        <button onClick={onUndo} disabled={!canUndo || thinking}>Undo</button>
-        <button onClick={onNewGame}>Joc nou</button>
 
         {/* Dificultate — doar dacă motorul are mai mult de un nivel */}
         {engine.difficulty.length > 1 && (

@@ -22,47 +22,6 @@
   text-transform: lowercase;
 }
 
-/* Selector motor */
-.engine-selector {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.engine-select {
-  background: transparent;
-  color: #ccc;
-  border: 1px solid #444;
-  border-radius: 3px;
-  padding: 5px 10px;
-  font-size: 0.78rem;
-  font-family: inherit;
-  cursor: pointer;
-  text-align: center;
-  transition: border-color 0.15s;
-}
-
-.engine-select:hover:not(:disabled) {
-  border-color: #666;
-}
-
-.engine-select:disabled {
-  opacity: 0.25;
-  cursor: default;
-}
-
-.engine-select option {
-  background: #1a1a1a;
-  color: #ccc;
-}
-
-.engine-desc {
-  font-size: 0.68rem;
-  color: #666;
-  letter-spacing: 0.3px;
-}
-
 /* Butoane */
 .controls {
   display: flex;
