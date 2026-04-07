@@ -49,6 +49,7 @@ function Board() {
   const [selected, setSelected] = useState<string | null>(null)
   const [legalMoves, setLegalMoves] = useState<string[]>([])
   const [history, setHistory] = useState<string[]>([])
+  const [moveHistory, setMoveHistory] = useState<LastMove[]>([]) // săgeți paralele cu history
   const [thinking, setThinking] = useState(false)
   const [lastMove, setLastMove] = useState<LastMove>(null)
   const [animating, setAnimating] = useState<AnimatingPiece>(null)
@@ -94,8 +95,10 @@ function Board() {
       duration,
     })
 
+    const arrow: LastMove = { from, to }
     setHistory(prev => [...prev, fenBefore])
-    setLastMove({ from, to })
+    setMoveHistory(prev => [...prev, lastMove]) // salvăm săgeata anterioară
+    setLastMove(arrow)
     setGame(new Chess(game.fen()))
 
     // Oprește animația după durata completă
@@ -146,6 +149,7 @@ function Board() {
     setSelected(null)
     setLegalMoves([])
     setHistory([])
+    setMoveHistory([])
     setThinking(false)
     setLastMove(null)
     setAnimating(null)
@@ -182,6 +186,7 @@ function Board() {
     setSelected(null)
     setLegalMoves([])
     setHistory([])
+    setMoveHistory([])
     setThinking(false)
     setLastMove(null)
     setAnimating(null)
@@ -190,22 +195,17 @@ function Board() {
   const handleUndo = useCallback(() => {
     if (history.length < 2) return
     const prevFen = history[history.length - 2]
-    const restored = new Chess(prevFen)
-    setGame(restored)
+    setGame(new Chess(prevFen))
     setHistory(prev => prev.slice(0, -2))
+    setMoveHistory(prev => prev.slice(0, -2))
     setSelected(null)
     setLegalMoves([])
     setAnimating(null)
 
-    // Reconstruim săgeata din ultima mutare a poziției restaurate
-    const restoredHistory = restored.history({ verbose: true })
-    if (restoredHistory.length > 0) {
-      const last = restoredHistory[restoredHistory.length - 1]
-      setLastMove({ from: last.from, to: last.to })
-    } else {
-      setLastMove(null)
-    }
-  }, [history])
+    // Restaurăm săgeata de dinainte de cele 2 mutări anulate
+    const restoredArrow = moveHistory.length >= 2 ? moveHistory[moveHistory.length - 2] : null
+    setLastMove(restoredArrow)
+  }, [history, moveHistory])
 
   return (
     <div className="board-wrapper">
