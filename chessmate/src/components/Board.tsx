@@ -190,12 +190,21 @@ function Board() {
   const handleUndo = useCallback(() => {
     if (history.length < 2) return
     const prevFen = history[history.length - 2]
-    setGame(new Chess(prevFen))
+    const restored = new Chess(prevFen)
+    setGame(restored)
     setHistory(prev => prev.slice(0, -2))
     setSelected(null)
     setLegalMoves([])
-    setLastMove(null)
     setAnimating(null)
+
+    // Reconstruim săgeata din ultima mutare a poziției restaurate
+    const restoredHistory = restored.history({ verbose: true })
+    if (restoredHistory.length > 0) {
+      const last = restoredHistory[restoredHistory.length - 1]
+      setLastMove({ from: last.from, to: last.to })
+    } else {
+      setLastMove(null)
+    }
   }, [history])
 
   return (
