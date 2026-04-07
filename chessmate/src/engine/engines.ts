@@ -16,6 +16,7 @@ export interface ChessEngine {
 import { stockfishEngine } from './stockfishEngine'
 import { toledoEngine } from './toledoEngine'
 import { p4wnEngine } from './p4wnEngine'
+import { microMaxEngine } from './microMaxEngine'
 import { randomEngine } from './randomEngine'
 
 // Registrul motoarelor — ordinea din array = ordinea în UI
@@ -23,6 +24,7 @@ export const ENGINES: ChessEngine[] = [
   stockfishEngine,
   toledoEngine,
   p4wnEngine,
+  microMaxEngine,
   randomEngine,
 ]
 
