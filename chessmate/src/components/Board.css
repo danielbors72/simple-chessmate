@@ -104,7 +104,7 @@
 .animating-piece.animate-to {
   left: var(--to-x);
   top: var(--to-y);
-  transition: left 0.45s ease-out, top 0.45s ease-out;
+  transition: left var(--anim-duration) ease-out, top var(--anim-duration) ease-out;
 }
 
 .animating-piece .piece {

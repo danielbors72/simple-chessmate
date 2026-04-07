@@ -40,7 +40,7 @@ function MoveArrow({ from, to }: MoveArrowProps) {
         >
           <polygon
             points="0 0, 3 1.5, 0 3"
-            fill="rgba(0, 0, 0, 0.25)"
+            fill="rgba(240, 184, 40, 0.55)"
           />
         </marker>
       </defs>
@@ -49,7 +49,7 @@ function MoveArrow({ from, to }: MoveArrowProps) {
         y1={sy}
         x2={ex}
         y2={ey}
-        stroke="rgba(0, 0, 0, 0.25)"
+        stroke="rgba(240, 184, 40, 0.55)"
         strokeWidth="1.8"
         strokeLinecap="round"
         markerEnd="url(#arrowhead)"

@@ -41,6 +41,7 @@ type AnimatingPiece = {
   pieceCode: string
   fromCol: number; fromRow: number
   toCol: number; toRow: number
+  duration: number  // durata animației în ms
 } | null
 
 function Board() {
@@ -64,7 +65,8 @@ function Board() {
   const isPlayerTurn = game.turn() === 'w'
 
   // Execută o mutare cu animație
-  const executeMove = useCallback((from: string, to: string, promotion?: string) => {
+  // isPlayer = true → animație 1s, false (AI) → animație 0.5s
+  const executeMove = useCallback((from: string, to: string, promotion?: string, isPlayer = false) => {
     const fromGrid = posToGrid(from)
     const toGrid = posToGrid(to)
 
@@ -82,19 +84,22 @@ function Board() {
     const move = game.move({ from, to, promotion: promoType })
     if (!move) return false
 
+    const duration = isPlayer ? 1000 : 500
+
     // Pornește animația
     setAnimating({
       pieceCode,
       fromCol: fromGrid.col, fromRow: fromGrid.row,
       toCol: toGrid.col, toRow: toGrid.row,
+      duration,
     })
 
     setHistory(prev => [...prev, fenBefore])
     setLastMove({ from, to })
     setGame(new Chess(game.fen()))
 
-    // Oprește animația după 450ms
-    setTimeout(() => setAnimating(null), 450)
+    // Oprește animația după durata completă
+    setTimeout(() => setAnimating(null), duration)
     return true
   }, [game])
 
@@ -115,12 +120,17 @@ function Board() {
       currentEngine.findBestMove(game.fen(), level).then((bestMove) => {
         if (engineRef.current !== currentEngine) return
 
-        const from = bestMove.slice(0, 2)
-        const to = bestMove.slice(2, 4)
-        const promotion = bestMove.length > 4 ? bestMove[4] : undefined
+        // Delay 1s înainte de mutarea AI — ca să pară că "gândește"
+        setTimeout(() => {
+          if (engineRef.current !== currentEngine) return
 
-        executeMove(from, to, promotion)
-        setThinking(false)
+          const from = bestMove.slice(0, 2)
+          const to = bestMove.slice(2, 4)
+          const promotion = bestMove.length > 4 ? bestMove[4] : undefined
+
+          executeMove(from, to, promotion)
+          setThinking(false)
+        }, 1000)
       })
     }
   }, [game, isPlayerTurn, gameOver, difficultyIndex, executeMove])
@@ -145,7 +155,7 @@ function Board() {
     if (gameOver || !isPlayerTurn || thinking || animating) return
 
     if (selected && legalMoves.includes(position)) {
-      executeMove(selected, position)
+      executeMove(selected, position, undefined, true)
       setSelected(null)
       setLegalMoves([])
       return
@@ -234,6 +244,7 @@ function Board() {
             fromRow={animating.fromRow}
             toCol={animating.toCol}
             toRow={animating.toRow}
+            duration={animating.duration}
           />
         )}
       </div>
@@ -254,18 +265,17 @@ function Board() {
 }
 
 // Componenta de animație — piesa care se mișcă
-function AnimatedPiece({ pieceCode, fromCol, fromRow, toCol, toRow }: {
+function AnimatedPiece({ pieceCode, fromCol, fromRow, toCol, toRow, duration }: {
   pieceCode: string
   fromCol: number; fromRow: number
   toCol: number; toRow: number
+  duration: number
 }) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Forțăm un reflow ca să pornească tranziția din poziția "from"
     const el = ref.current
     if (!el) return
-    // Citim offsetHeight pentru a forța reflow
     el.offsetHeight
     el.classList.add('animate-to')
   }, [])
@@ -285,6 +295,7 @@ function AnimatedPiece({ pieceCode, fromCol, fromRow, toCol, toRow }: {
         '--from-y': `${fromY}%`,
         '--to-x': `${toX}%`,
         '--to-y': `${toY}%`,
+        '--anim-duration': `${duration}ms`,
       } as React.CSSProperties}
     >
       <img
