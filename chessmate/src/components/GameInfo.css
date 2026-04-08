@@ -76,6 +76,118 @@
   color: #ccc;
 }
 
+/* Selector mod de joc */
+.mode-selector {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+}
+
+.mode-btn {
+  background: transparent;
+  color: #666;
+  border: 1px solid #333;
+  padding: 5px 14px;
+  font-size: 0.72rem;
+  font-family: inherit;
+  letter-spacing: 0.3px;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.mode-btn:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+.mode-btn:last-child {
+  border-radius: 0 3px 3px 0;
+  border-left: none;
+}
+
+.mode-btn.active {
+  color: #ccc;
+  border-color: #555;
+  background: #2a2a2a;
+}
+
+.mode-btn:hover:not(:disabled):not(.active) {
+  color: #999;
+  border-color: #444;
+}
+
+.mode-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+/* Selectoare motoare */
+.engine-selectors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.engine-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.engine-label {
+  font-size: 0.68rem;
+  color: #555;
+  text-transform: lowercase;
+  min-width: 36px;
+  text-align: right;
+}
+
+.engine-row select {
+  background: transparent;
+  color: #999;
+  border: 1px solid #333;
+  border-radius: 3px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.engine-row select:hover:not(:disabled) {
+  color: #ccc;
+  border-color: #555;
+}
+
+.engine-row select:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.engine-row select option {
+  background: #1a1a1a;
+  color: #ccc;
+}
+
+/* Slider viteză */
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.speed-control label {
+  font-size: 0.68rem;
+  color: #555;
+  text-transform: lowercase;
+}
+
+.speed-control input[type="range"] {
+  width: 80px;
+  accent-color: #555;
+}
+
 /* Istoric mutări */
 .move-history {
   display: flex;

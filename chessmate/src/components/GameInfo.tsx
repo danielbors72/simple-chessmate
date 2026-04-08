@@ -1,8 +1,10 @@
-// GameInfo.tsx — Status joc, selector motor, dificultate, butoane, istoric mutări
+// GameInfo.tsx — Status joc, selector mod, motoare, dificultate, controls AI vs AI, istoric
 
 import { Chess } from 'chess.js'
 import type { ChessEngine } from '../engine/engines'
 import './GameInfo.css'
+
+type GameMode = 'human-vs-ai' | 'ai-vs-ai'
 
 type GameInfoProps = {
   game: Chess
@@ -15,9 +17,20 @@ type GameInfoProps = {
   difficultyIndex: number
   onDifficultyChange: (i: number) => void
   thinking: boolean
+  // Props noi — AI vs AI
+  gameMode: GameMode
+  onModeChange: (mode: GameMode) => void
+  engineWhite: ChessEngine
+  onEngineWhiteChange: (name: string) => void
+  diffWhiteIndex: number
+  onDiffWhiteChange: (i: number) => void
+  paused: boolean
+  onPauseToggle: () => void
+  autoPlaySpeed: number
+  onSpeedChange: (ms: number) => void
 }
 
-function getStatus(game: Chess, thinking: boolean, engineName: string): string {
+function getStatus(game: Chess, thinking: boolean, engineName: string, gameMode: GameMode, engineWhiteName: string): string {
   if (game.isCheckmate()) {
     return game.turn() === 'w' ? 'Șah mat — negrul câștigă' : 'Șah mat — albul câștigă'
   }
@@ -25,6 +38,13 @@ function getStatus(game: Chess, thinking: boolean, engineName: string): string {
   if (game.isThreefoldRepetition()) return 'Remiză — repetiție triplă'
   if (game.isInsufficientMaterial()) return 'Remiză — material insuficient'
   if (game.isDraw()) return 'Remiză'
+
+  if (gameMode === 'ai-vs-ai') {
+    const name = game.turn() === 'w' ? engineWhiteName : engineName
+    if (thinking) return `${name} gândește...`
+    return game.turn() === 'w' ? `${engineWhiteName} (alb) la mutare` : `${engineName} (negru) la mutare`
+  }
+
   if (thinking) return `${engineName} gândește...`
   if (game.inCheck()) return game.turn() === 'w' ? 'Albul e în șah' : 'Negrul e în șah'
   return game.turn() === 'w' ? 'Albul la mutare' : 'Negrul la mutare'
@@ -46,43 +66,116 @@ function GameInfo({
   game, canUndo, onNewGame, onUndo,
   engine, engines, onEngineChange,
   difficultyIndex, onDifficultyChange,
-  thinking
+  thinking,
+  gameMode, onModeChange,
+  engineWhite, onEngineWhiteChange,
+  diffWhiteIndex, onDiffWhiteChange,
+  paused, onPauseToggle,
+  autoPlaySpeed, onSpeedChange,
 }: GameInfoProps) {
-  const status = getStatus(game, thinking, engine.name)
+  const status = getStatus(game, thinking, engine.name, gameMode, engineWhite.name)
   const moves = formatMoveHistory(game)
+  const isAiVsAi = gameMode === 'ai-vs-ai'
 
   return (
     <div className="game-info">
       <div className="status">{status}</div>
 
-      <div className="controls">
-        <button onClick={onUndo} disabled={!canUndo || thinking}>Undo</button>
-        <button onClick={onNewGame}>Joc nou</button>
-
-        {/* Selector motor — în rând cu butoanele */}
-        <select
-          value={engine.name}
-          onChange={(e) => onEngineChange(e.target.value)}
+      {/* Selector mod de joc */}
+      <div className="mode-selector">
+        <button
+          className={`mode-btn ${!isAiVsAi ? 'active' : ''}`}
+          onClick={() => onModeChange('human-vs-ai')}
           disabled={thinking}
         >
-          {engines.map(e => (
-            <option key={e.name} value={e.name}>
-              {e.name} ({e.year})
-            </option>
-          ))}
-        </select>
+          Om vs Motor
+        </button>
+        <button
+          className={`mode-btn ${isAiVsAi ? 'active' : ''}`}
+          onClick={() => onModeChange('ai-vs-ai')}
+          disabled={thinking}
+        >
+          Motor vs Motor
+        </button>
+      </div>
 
-        {/* Dificultate — doar dacă motorul are mai mult de un nivel */}
-        {engine.difficulty.length > 1 && (
+      {/* Selectoare motoare */}
+      <div className="engine-selectors">
+        {isAiVsAi && (
+          <div className="engine-row">
+            <span className="engine-label">alb</span>
+            <select
+              value={engineWhite.name}
+              onChange={(e) => onEngineWhiteChange(e.target.value)}
+              disabled={thinking}
+            >
+              {engines.map(e => (
+                <option key={e.name} value={e.name}>{e.name} ({e.year})</option>
+              ))}
+            </select>
+            {engineWhite.difficulty.length > 1 && (
+              <select
+                value={diffWhiteIndex}
+                onChange={(e) => onDiffWhiteChange(Number(e.target.value))}
+                disabled={thinking}
+              >
+                {engineWhite.difficulty.map((d, i) => (
+                  <option key={i} value={i}>{d.label}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
+        <div className="engine-row">
+          {isAiVsAi && <span className="engine-label">negru</span>}
           <select
-            value={difficultyIndex}
-            onChange={(e) => onDifficultyChange(Number(e.target.value))}
+            value={engine.name}
+            onChange={(e) => onEngineChange(e.target.value)}
             disabled={thinking}
           >
-            {engine.difficulty.map((d, i) => (
-              <option key={i} value={i}>{d.label}</option>
+            {engines.map(e => (
+              <option key={e.name} value={e.name}>{e.name} ({e.year})</option>
             ))}
           </select>
+          {engine.difficulty.length > 1 && (
+            <select
+              value={difficultyIndex}
+              onChange={(e) => onDifficultyChange(Number(e.target.value))}
+              disabled={thinking}
+            >
+              {engine.difficulty.map((d, i) => (
+                <option key={i} value={i}>{d.label}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="controls">
+        {isAiVsAi ? (
+          <>
+            <button onClick={onPauseToggle}>
+              {paused ? '▶ Play' : '⏸ Pauză'}
+            </button>
+            <button onClick={onNewGame}>Joc nou</button>
+            <div className="speed-control">
+              <label>Viteză</label>
+              <input
+                type="range"
+                min={300}
+                max={3000}
+                step={100}
+                value={autoPlaySpeed}
+                onChange={(e) => onSpeedChange(Number(e.target.value))}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <button onClick={onUndo} disabled={!canUndo || thinking}>Undo</button>
+            <button onClick={onNewGame}>Joc nou</button>
+          </>
         )}
       </div>
 

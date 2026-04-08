@@ -360,6 +360,16 @@ function Board() {
         difficultyIndex={difficultyIndex}
         onDifficultyChange={setDifficultyIndex}
         thinking={thinking}
+        gameMode={gameMode}
+        onModeChange={handleModeChange}
+        engineWhite={engineWhite}
+        onEngineWhiteChange={handleEngineWhiteChange}
+        diffWhiteIndex={diffWhiteIndex}
+        onDiffWhiteChange={setDiffWhiteIndex}
+        paused={paused}
+        onPauseToggle={() => setPaused(p => !p)}
+        autoPlaySpeed={autoPlaySpeed}
+        onSpeedChange={setAutoPlaySpeed}
       />
     </div>
   )
