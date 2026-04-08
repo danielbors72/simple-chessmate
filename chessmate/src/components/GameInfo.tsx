@@ -168,7 +168,7 @@ function GameInfo({
             <button onClick={onPlayToggle} disabled={gameOver}>
               {playing ? '⏸ Pauză' : '▶ Start'}
             </button>
-            <button onClick={onStep} disabled={gameOver || thinking || playing}>
+            <button onClick={onStep} disabled={gameOver}>
               ⏭ Pas
             </button>
             <button onClick={onUndoAiVsAi} disabled={!canUndoAiVsAi || playing}>
@@ -184,17 +184,17 @@ function GameInfo({
         )}
       </div>
 
-      {/* Slider viteză — doar în AI vs AI */}
+      {/* Slider viteză — doar în AI vs AI, stânga=lent, dreapta=rapid */}
       {isAiVsAi && (
         <div className="speed-control">
           <label>Viteză auto-play</label>
           <input
             type="range"
-            min={300}
+            min={0}
             max={3000}
             step={100}
-            value={autoPlaySpeed}
-            onChange={(e) => onSpeedChange(Number(e.target.value))}
+            value={3000 - autoPlaySpeed}
+            onChange={(e) => onSpeedChange(3000 - Number(e.target.value))}
           />
         </div>
       )}

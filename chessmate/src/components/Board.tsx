@@ -163,10 +163,13 @@ function Board() {
     }
   }, [game, gameMode, isPlayerTurn, gameOver, difficultyIndex, executeMove])
 
-  // Game loop AI vs AI — execută o mutare când playing (auto) sau stepRequested (manual)
+  // AI vs AI: pregătește mutarea (motorul gândește), apoi așteaptă trigger
+  const pendingMoveRef = useRef<string | null>(null)
+
+  // Pas 1: când e tura cuiva, cere motorului să gândească
   useEffect(() => {
-    if (gameMode !== 'ai-vs-ai' || gameOver || animating) return
-    if (!playing && !stepRequested) return
+    if (gameMode !== 'ai-vs-ai' || gameOver) return
+    if (pendingMoveRef.current) return // deja are mutare gata
 
     const turn = game.turn()
     const currentEngine = turn === 'w' ? engineWhiteRef.current : engineRef.current
@@ -175,35 +178,60 @@ function Board() {
       : currentEngine.difficulty[difficultyIndex]?.value ?? currentEngine.difficulty[0].value
 
     setThinking(true)
-    const isStep = stepRequested
 
     currentEngine.findBestMove(game.fen(), level).then((bestMove) => {
       const stillCurrent = turn === 'w'
         ? engineWhiteRef.current === currentEngine
         : engineRef.current === currentEngine
-
       if (!stillCurrent) return
 
-      // Delay: step = minim, auto-play = viteza din slider (ref = valoare curentă)
-      const delay = isStep ? 300 : autoPlaySpeedRef.current
+      pendingMoveRef.current = bestMove
+      setThinking(false)
 
-      setTimeout(() => {
-        const stillValid = turn === 'w'
-          ? engineWhiteRef.current === currentEngine
-          : engineRef.current === currentEngine
-
-        if (!stillValid) return
-
-        const from = bestMove.slice(0, 2)
-        const to = bestMove.slice(2, 4)
-        const promotion = bestMove.length > 4 ? bestMove[4] : undefined
-
-        executeMove(from, to, promotion)
-        setThinking(false)
-        setStepRequested(false)
-      }, delay)
+      // Dacă auto-play e activ, execută cu delay
+      if (playing) {
+        setTimeout(() => {
+          if (pendingMoveRef.current) {
+            applyPendingMove()
+          }
+        }, autoPlaySpeedRef.current)
+      }
     })
-  }, [game, gameMode, gameOver, animating, playing, stepRequested, difficultyIndex, diffWhiteIndex, executeMove])
+  }, [game, gameMode, gameOver, difficultyIndex, diffWhiteIndex])
+
+  // Aplică mutarea pregătită
+  const applyPendingMove = useCallback(() => {
+    const bestMove = pendingMoveRef.current
+    if (!bestMove) return
+
+    pendingMoveRef.current = null
+    const from = bestMove.slice(0, 2)
+    const to = bestMove.slice(2, 4)
+    const promotion = bestMove.length > 4 ? bestMove[4] : undefined
+
+    executeMove(from, to, promotion)
+    setStepRequested(false)
+  }, [executeMove])
+
+  // Pas 2: step manual — execută mutarea pregătită imediat
+  useEffect(() => {
+    if (!stepRequested || !pendingMoveRef.current) return
+    applyPendingMove()
+  }, [stepRequested, applyPendingMove])
+
+  // Pas 3: auto-play continuu — când o mutare se termină, programează următoarea
+  useEffect(() => {
+    if (gameMode !== 'ai-vs-ai' || !playing || gameOver) return
+    if (!pendingMoveRef.current) return
+
+    const timer = setTimeout(() => {
+      if (pendingMoveRef.current) {
+        applyPendingMove()
+      }
+    }, autoPlaySpeedRef.current)
+
+    return () => clearTimeout(timer)
+  }, [game, gameMode, playing, gameOver, applyPendingMove])
 
   // Schimbă modul de joc (Human vs AI ↔ AI vs AI)
   const handleModeChange = useCallback((mode: GameMode) => {
@@ -272,11 +300,11 @@ function Board() {
     setLastMove(restoredArrow)
   }, [history, moveHistory, thinking])
 
-  // Următoarea mutare (step manual)
+  // Următoarea mutare (step manual) — funcționează și în timpul gândirii
   const handleStep = useCallback(() => {
-    if (gameOver || thinking || animating) return
+    if (gameOver) return
     setStepRequested(true)
-  }, [gameOver, thinking, animating])
+  }, [gameOver])
 
   // Tastatura: Space = next move în AI vs AI
   useEffect(() => {
@@ -285,21 +313,17 @@ function Board() {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault()
-        if (!gameOver && !thinking && !animating) {
-          setStepRequested(true)
-        }
+        if (!gameOver) setStepRequested(true)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [gameMode, gameOver, thinking, animating])
+  }, [gameMode, gameOver])
 
   const handleSquareClick = useCallback((position: string) => {
     // În AI vs AI, click pe tablă = următoarea mutare
     if (gameMode === 'ai-vs-ai') {
-      if (!gameOver && !thinking && !animating && !playing) {
-        setStepRequested(true)
-      }
+      if (!gameOver) setStepRequested(true)
       return
     }
     if (gameOver || !isPlayerTurn || thinking || animating) return
