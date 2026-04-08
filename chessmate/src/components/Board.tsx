@@ -301,7 +301,7 @@ function Board() {
 
   return (
     <div className="board-wrapper">
-      <div className="board" ref={boardRef}>
+      <div className={`board${gameMode === 'ai-vs-ai' ? ' spectator' : ''}`} ref={boardRef}>
         {RANKS.map((rank) =>
           FILES.map((file) => {
             const position = `${file}${rank}`

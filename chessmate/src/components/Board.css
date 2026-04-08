@@ -98,6 +98,11 @@
   right: 3px;
 }
 
+/* Mod spectator (AI vs AI) — fără cursor pointer */
+.board.spectator .square {
+  cursor: default;
+}
+
 /* SVG overlay pentru săgeata ultimei mutări */
 .move-arrow-svg {
   position: absolute;
