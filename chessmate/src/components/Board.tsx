@@ -134,8 +134,9 @@ function Board() {
     }
   }, [engineWhite, gameMode])
 
-  // Când e rândul negrului (AI), cere mutare de la motor
+  // Când e rândul negrului (AI) — doar în modul Human vs AI
   useEffect(() => {
+    if (gameMode !== 'human-vs-ai') return
     if (!isPlayerTurn && !gameOver) {
       setThinking(true)
       const currentEngine = engineRef.current
@@ -157,7 +158,77 @@ function Board() {
         }, 1000)
       })
     }
-  }, [game, isPlayerTurn, gameOver, difficultyIndex, executeMove])
+  }, [game, gameMode, isPlayerTurn, gameOver, difficultyIndex, executeMove])
+
+  // Game loop AI vs AI — ambele motoare joacă automat
+  useEffect(() => {
+    if (gameMode !== 'ai-vs-ai' || gameOver || paused || animating) return
+
+    const turn = game.turn()
+    const currentEngine = turn === 'w' ? engineWhiteRef.current : engineRef.current
+    const level = turn === 'w'
+      ? currentEngine.difficulty[diffWhiteIndex]?.value ?? currentEngine.difficulty[0].value
+      : currentEngine.difficulty[difficultyIndex]?.value ?? currentEngine.difficulty[0].value
+
+    setThinking(true)
+
+    currentEngine.findBestMove(game.fen(), level).then((bestMove) => {
+      // Verifică că motorul nu s-a schimbat între timp
+      const stillCurrent = turn === 'w'
+        ? engineWhiteRef.current === currentEngine
+        : engineRef.current === currentEngine
+
+      if (!stillCurrent) return
+
+      setTimeout(() => {
+        const stillValid = turn === 'w'
+          ? engineWhiteRef.current === currentEngine
+          : engineRef.current === currentEngine
+
+        if (!stillValid) return
+
+        const from = bestMove.slice(0, 2)
+        const to = bestMove.slice(2, 4)
+        const promotion = bestMove.length > 4 ? bestMove[4] : undefined
+
+        executeMove(from, to, promotion)
+        setThinking(false)
+      }, autoPlaySpeed)
+    })
+  }, [game, gameMode, gameOver, paused, animating, difficultyIndex, diffWhiteIndex, autoPlaySpeed, executeMove])
+
+  // Schimbă modul de joc (Human vs AI ↔ AI vs AI)
+  const handleModeChange = useCallback((mode: GameMode) => {
+    if (mode === gameMode) return
+    setGameMode(mode)
+    setGame(new Chess())
+    setSelected(null)
+    setLegalMoves([])
+    setHistory([])
+    setMoveHistory([])
+    setThinking(false)
+    setLastMove(null)
+    setAnimating(null)
+    setPaused(false)
+  }, [gameMode])
+
+  // Schimbă motorul alb (AI vs AI)
+  const handleEngineWhiteChange = useCallback((engineName: string) => {
+    const newEngine = ENGINES.find(e => e.name === engineName)
+    if (!newEngine || newEngine === engineWhite) return
+
+    engineWhite.destroy()
+    setEngineWhite(newEngine)
+    setDiffWhiteIndex(0)
+    setGame(new Chess())
+    setSelected(null)
+    setLegalMoves([])
+    setHistory([])
+    setMoveHistory([])
+    setThinking(false)
+    setLastMove(null)
+    setAnimating(null)
+  }, [engineWhite])
 
   const handleEngineChange = useCallback((engineName: string) => {
     const newEngine = ENGINES.find(e => e.name === engineName)
@@ -177,7 +248,7 @@ function Board() {
   }, [engine])
 
   const handleSquareClick = useCallback((position: string) => {
-    if (gameOver || !isPlayerTurn || thinking || animating) return
+    if (gameMode === 'ai-vs-ai' || gameOver || !isPlayerTurn || thinking || animating) return
 
     if (selected && legalMoves.includes(position)) {
       executeMove(selected, position, undefined, true)
