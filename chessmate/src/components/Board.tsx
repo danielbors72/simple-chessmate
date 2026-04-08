@@ -72,6 +72,8 @@ function Board() {
   const [playing, setPlaying] = useState(false)       // false = neînceput sau pauză
   const [stepRequested, setStepRequested] = useState(false) // true = execută o singură mutare
   const [autoPlaySpeed, setAutoPlaySpeed] = useState(1500)  // ms între mutări în auto-play
+  const autoPlaySpeedRef = useRef(autoPlaySpeed)
+  autoPlaySpeedRef.current = autoPlaySpeed
 
   const gameOver = game.isGameOver()
   const inCheck = game.inCheck()
@@ -173,9 +175,7 @@ function Board() {
       : currentEngine.difficulty[difficultyIndex]?.value ?? currentEngine.difficulty[0].value
 
     setThinking(true)
-
-    // Delay-ul: auto-play folosește viteza, step = fără delay
-    const delay = stepRequested ? 300 : autoPlaySpeed
+    const isStep = stepRequested
 
     currentEngine.findBestMove(game.fen(), level).then((bestMove) => {
       const stillCurrent = turn === 'w'
@@ -183,6 +183,9 @@ function Board() {
         : engineRef.current === currentEngine
 
       if (!stillCurrent) return
+
+      // Delay: step = minim, auto-play = viteza din slider (ref = valoare curentă)
+      const delay = isStep ? 300 : autoPlaySpeedRef.current
 
       setTimeout(() => {
         const stillValid = turn === 'w'
@@ -197,10 +200,10 @@ function Board() {
 
         executeMove(from, to, promotion)
         setThinking(false)
-        setStepRequested(false) // consumă cererea de step
+        setStepRequested(false)
       }, delay)
     })
-  }, [game, gameMode, gameOver, animating, playing, stepRequested, difficultyIndex, diffWhiteIndex, autoPlaySpeed, executeMove])
+  }, [game, gameMode, gameOver, animating, playing, stepRequested, difficultyIndex, diffWhiteIndex, executeMove])
 
   // Schimbă modul de joc (Human vs AI ↔ AI vs AI)
   const handleModeChange = useCallback((mode: GameMode) => {
@@ -292,7 +295,14 @@ function Board() {
   }, [gameMode, gameOver, thinking, animating])
 
   const handleSquareClick = useCallback((position: string) => {
-    if (gameMode === 'ai-vs-ai' || gameOver || !isPlayerTurn || thinking || animating) return
+    // În AI vs AI, click pe tablă = următoarea mutare
+    if (gameMode === 'ai-vs-ai') {
+      if (!gameOver && !thinking && !animating && !playing) {
+        setStepRequested(true)
+      }
+      return
+    }
+    if (gameOver || !isPlayerTurn || thinking || animating) return
 
     if (selected && legalMoves.includes(position)) {
       executeMove(selected, position, undefined, true)
@@ -373,8 +383,8 @@ function Board() {
           })
         )}
 
-        {/* Săgeată ultimă mutare */}
-        {lastMove && !animating && (
+        {/* Săgeată ultimă mutare — vizibilă și în timpul animației */}
+        {lastMove && (
           <MoveArrow
             from={posToGrid(lastMove.from)}
             to={posToGrid(lastMove.to)}

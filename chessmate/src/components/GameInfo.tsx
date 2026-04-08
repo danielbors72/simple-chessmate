@@ -201,7 +201,7 @@ function GameInfo({
 
       {/* Hint tastatură */}
       {isAiVsAi && !playing && !gameOver && (
-        <div className="keyboard-hint">spațiu = următoarea mutare</div>
+        <div className="keyboard-hint">click pe tablă sau spațiu = următoarea mutare</div>
       )}
 
       {moves.length > 0 && (
