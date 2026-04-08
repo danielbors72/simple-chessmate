@@ -68,9 +68,10 @@ function Board() {
   const engineWhiteRef = useRef(engineWhite)
   const boardRef = useRef<HTMLDivElement>(null)
 
-  // Controluri AI vs AI: pauză și viteză
-  const [paused, setPaused] = useState(false)
-  const [autoPlaySpeed, setAutoPlaySpeed] = useState(1500) // ms între mutări
+  // Controluri AI vs AI
+  const [playing, setPlaying] = useState(false)       // false = neînceput sau pauză
+  const [stepRequested, setStepRequested] = useState(false) // true = execută o singură mutare
+  const [autoPlaySpeed, setAutoPlaySpeed] = useState(1500)  // ms între mutări în auto-play
 
   const gameOver = game.isGameOver()
   const inCheck = game.inCheck()
@@ -160,9 +161,10 @@ function Board() {
     }
   }, [game, gameMode, isPlayerTurn, gameOver, difficultyIndex, executeMove])
 
-  // Game loop AI vs AI — ambele motoare joacă automat
+  // Game loop AI vs AI — execută o mutare când playing (auto) sau stepRequested (manual)
   useEffect(() => {
-    if (gameMode !== 'ai-vs-ai' || gameOver || paused || animating) return
+    if (gameMode !== 'ai-vs-ai' || gameOver || animating) return
+    if (!playing && !stepRequested) return
 
     const turn = game.turn()
     const currentEngine = turn === 'w' ? engineWhiteRef.current : engineRef.current
@@ -172,8 +174,10 @@ function Board() {
 
     setThinking(true)
 
+    // Delay-ul: auto-play folosește viteza, step = fără delay
+    const delay = stepRequested ? 300 : autoPlaySpeed
+
     currentEngine.findBestMove(game.fen(), level).then((bestMove) => {
-      // Verifică că motorul nu s-a schimbat între timp
       const stillCurrent = turn === 'w'
         ? engineWhiteRef.current === currentEngine
         : engineRef.current === currentEngine
@@ -193,9 +197,10 @@ function Board() {
 
         executeMove(from, to, promotion)
         setThinking(false)
-      }, autoPlaySpeed)
+        setStepRequested(false) // consumă cererea de step
+      }, delay)
     })
-  }, [game, gameMode, gameOver, paused, animating, difficultyIndex, diffWhiteIndex, autoPlaySpeed, executeMove])
+  }, [game, gameMode, gameOver, animating, playing, stepRequested, difficultyIndex, diffWhiteIndex, autoPlaySpeed, executeMove])
 
   // Schimbă modul de joc (Human vs AI ↔ AI vs AI)
   const handleModeChange = useCallback((mode: GameMode) => {
@@ -209,7 +214,8 @@ function Board() {
     setThinking(false)
     setLastMove(null)
     setAnimating(null)
-    setPaused(false)
+    setPlaying(false)
+    setStepRequested(false)
   }, [gameMode])
 
   // Schimbă motorul alb (AI vs AI)
@@ -246,6 +252,44 @@ function Board() {
     setLastMove(null)
     setAnimating(null)
   }, [engine])
+
+  // Undo în AI vs AI — revine o mutare, păstrează săgeata
+  const handleUndoAiVsAi = useCallback(() => {
+    if (history.length < 1 || thinking) return
+    const prevFen = history[history.length - 1]
+    setGame(new Chess(prevFen))
+    setHistory(prev => prev.slice(0, -1))
+    setMoveHistory(prev => prev.slice(0, -1))
+    setAnimating(null)
+    setPlaying(false)
+    setStepRequested(false)
+
+    // Restaurăm săgeata mutării anterioare
+    const restoredArrow = moveHistory.length >= 1 ? moveHistory[moveHistory.length - 1] : null
+    setLastMove(restoredArrow)
+  }, [history, moveHistory, thinking])
+
+  // Următoarea mutare (step manual)
+  const handleStep = useCallback(() => {
+    if (gameOver || thinking || animating) return
+    setStepRequested(true)
+  }, [gameOver, thinking, animating])
+
+  // Tastatura: Space = next move în AI vs AI
+  useEffect(() => {
+    if (gameMode !== 'ai-vs-ai') return
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault()
+        if (!gameOver && !thinking && !animating) {
+          setStepRequested(true)
+        }
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [gameMode, gameOver, thinking, animating])
 
   const handleSquareClick = useCallback((position: string) => {
     if (gameMode === 'ai-vs-ai' || gameOver || !isPlayerTurn || thinking || animating) return
@@ -366,8 +410,11 @@ function Board() {
         onEngineWhiteChange={handleEngineWhiteChange}
         diffWhiteIndex={diffWhiteIndex}
         onDiffWhiteChange={setDiffWhiteIndex}
-        paused={paused}
-        onPauseToggle={() => setPaused(p => !p)}
+        playing={playing}
+        onPlayToggle={() => setPlaying(p => !p)}
+        onStep={handleStep}
+        onUndoAiVsAi={handleUndoAiVsAi}
+        canUndoAiVsAi={history.length >= 1 && !thinking}
         autoPlaySpeed={autoPlaySpeed}
         onSpeedChange={setAutoPlaySpeed}
       />

@@ -17,20 +17,23 @@ type GameInfoProps = {
   difficultyIndex: number
   onDifficultyChange: (i: number) => void
   thinking: boolean
-  // Props noi — AI vs AI
+  // AI vs AI
   gameMode: GameMode
   onModeChange: (mode: GameMode) => void
   engineWhite: ChessEngine
   onEngineWhiteChange: (name: string) => void
   diffWhiteIndex: number
   onDiffWhiteChange: (i: number) => void
-  paused: boolean
-  onPauseToggle: () => void
+  playing: boolean
+  onPlayToggle: () => void
+  onStep: () => void
+  onUndoAiVsAi: () => void
+  canUndoAiVsAi: boolean
   autoPlaySpeed: number
   onSpeedChange: (ms: number) => void
 }
 
-function getStatus(game: Chess, thinking: boolean, engineName: string, gameMode: GameMode, engineWhiteName: string): string {
+function getStatus(game: Chess, thinking: boolean, engineName: string, gameMode: GameMode, engineWhiteName: string, playing: boolean): string {
   if (game.isCheckmate()) {
     return game.turn() === 'w' ? 'Șah mat — negrul câștigă' : 'Șah mat — albul câștigă'
   }
@@ -40,8 +43,13 @@ function getStatus(game: Chess, thinking: boolean, engineName: string, gameMode:
   if (game.isDraw()) return 'Remiză'
 
   if (gameMode === 'ai-vs-ai') {
+    // Jocul nu a început încă
+    if (!playing && game.history().length === 0 && !thinking) {
+      return 'alege motoarele și apasă start'
+    }
     const name = game.turn() === 'w' ? engineWhiteName : engineName
     if (thinking) return `${name} gândește...`
+    if (!playing) return 'pauză'
     return game.turn() === 'w' ? `${engineWhiteName} (alb) la mutare` : `${engineName} (negru) la mutare`
   }
 
@@ -70,12 +78,14 @@ function GameInfo({
   gameMode, onModeChange,
   engineWhite, onEngineWhiteChange,
   diffWhiteIndex, onDiffWhiteChange,
-  paused, onPauseToggle,
+  playing, onPlayToggle, onStep,
+  onUndoAiVsAi, canUndoAiVsAi,
   autoPlaySpeed, onSpeedChange,
 }: GameInfoProps) {
-  const status = getStatus(game, thinking, engine.name, gameMode, engineWhite.name)
+  const status = getStatus(game, thinking, engine.name, gameMode, engineWhite.name, playing)
   const moves = formatMoveHistory(game)
   const isAiVsAi = gameMode === 'ai-vs-ai'
+  const gameOver = game.isGameOver()
 
   return (
     <div className="game-info">
@@ -107,7 +117,7 @@ function GameInfo({
             <select
               value={engineWhite.name}
               onChange={(e) => onEngineWhiteChange(e.target.value)}
-              disabled={thinking}
+              disabled={thinking || playing}
             >
               {engines.map(e => (
                 <option key={e.name} value={e.name}>{e.name} ({e.year})</option>
@@ -117,7 +127,7 @@ function GameInfo({
               <select
                 value={diffWhiteIndex}
                 onChange={(e) => onDiffWhiteChange(Number(e.target.value))}
-                disabled={thinking}
+                disabled={thinking || playing}
               >
                 {engineWhite.difficulty.map((d, i) => (
                   <option key={i} value={i}>{d.label}</option>
@@ -131,7 +141,7 @@ function GameInfo({
           <select
             value={engine.name}
             onChange={(e) => onEngineChange(e.target.value)}
-            disabled={thinking}
+            disabled={thinking || (isAiVsAi && playing)}
           >
             {engines.map(e => (
               <option key={e.name} value={e.name}>{e.name} ({e.year})</option>
@@ -141,7 +151,7 @@ function GameInfo({
             <select
               value={difficultyIndex}
               onChange={(e) => onDifficultyChange(Number(e.target.value))}
-              disabled={thinking}
+              disabled={thinking || (isAiVsAi && playing)}
             >
               {engine.difficulty.map((d, i) => (
                 <option key={i} value={i}>{d.label}</option>
@@ -155,21 +165,16 @@ function GameInfo({
       <div className="controls">
         {isAiVsAi ? (
           <>
-            <button onClick={onPauseToggle}>
-              {paused ? '▶ Play' : '⏸ Pauză'}
+            <button onClick={onPlayToggle} disabled={gameOver}>
+              {playing ? '⏸ Pauză' : '▶ Start'}
+            </button>
+            <button onClick={onStep} disabled={gameOver || thinking || playing}>
+              ⏭ Pas
+            </button>
+            <button onClick={onUndoAiVsAi} disabled={!canUndoAiVsAi || playing}>
+              ↩ Înapoi
             </button>
             <button onClick={onNewGame}>Joc nou</button>
-            <div className="speed-control">
-              <label>Viteză</label>
-              <input
-                type="range"
-                min={300}
-                max={3000}
-                step={100}
-                value={autoPlaySpeed}
-                onChange={(e) => onSpeedChange(Number(e.target.value))}
-              />
-            </div>
           </>
         ) : (
           <>
@@ -178,6 +183,26 @@ function GameInfo({
           </>
         )}
       </div>
+
+      {/* Slider viteză — doar în AI vs AI */}
+      {isAiVsAi && (
+        <div className="speed-control">
+          <label>Viteză auto-play</label>
+          <input
+            type="range"
+            min={300}
+            max={3000}
+            step={100}
+            value={autoPlaySpeed}
+            onChange={(e) => onSpeedChange(Number(e.target.value))}
+          />
+        </div>
+      )}
+
+      {/* Hint tastatură */}
+      {isAiVsAi && !playing && !gameOver && (
+        <div className="keyboard-hint">spațiu = următoarea mutare</div>
+      )}
 
       {moves.length > 0 && (
         <div className="move-history">

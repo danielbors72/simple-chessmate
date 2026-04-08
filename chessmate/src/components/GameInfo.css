@@ -170,11 +170,12 @@
   color: #ccc;
 }
 
-/* Slider viteză */
+/* Slider viteză — sub butoane */
 .speed-control {
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .speed-control label {
@@ -184,8 +185,16 @@
 }
 
 .speed-control input[type="range"] {
-  width: 80px;
+  width: 120px;
   accent-color: #555;
+}
+
+/* Hint tastatură */
+.keyboard-hint {
+  text-align: center;
+  font-size: 0.65rem;
+  color: #444;
+  letter-spacing: 0.3px;
 }
 
 /* Istoric mutări */
