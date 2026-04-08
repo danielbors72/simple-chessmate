@@ -1,25 +1,23 @@
 # ChessMate — Aplicație de Șah (React + PWA)
 
 ## Directorul de lucru
-`/Users/danielbors/Projects/AI-Projects/CC/soft_uri/chess/`
+`/Users/danielbors/Projects/AI-Projects/CC/`
 
 Tot lucrul pe acest proiect se face EXCLUSIV în acest director.
 
 ## Structura
 ```
-chess/
-├── plans/                    # Documentație, mega-prompt, ghid pedagogic, arhitectură
+CC/
+├── plans/                    # Documentație, mega-prompt, ghid pedagogic, arhitectură, research
 ├── chessmate/                # Proiectul React (Vite)
 │   ├── src/
-│   │   ├── components/       # Board, Square, Piece, GameInfo
-│   │   ├── engine/           # Integrare Stockfish WASM
-│   │   ├── hooks/            # (pregătit pentru faze viitoare)
-│   │   ├── puzzles/          # (pregătit pentru Faza 4)
-│   │   ├── styles/           # (pregătit)
-│   │   ├── types/            # (pregătit)
-│   │   └── utils/            # (pregătit)
+│   │   ├── components/       # Board, Square, Piece, GameInfo, EngineGallery, PuzzleView
+│   │   ├── engine/           # 9 motoare: Stockfish, Microchess, Sargon, Spectrum, TSCP, p4wn, Toledo, Micro-Max, Random
+│   │   ├── puzzles/          # Date și componente puzzle
+│   │   └── assets/           # Piese SVG cburnett
 │   └── public/               # Stockfish WASM + assets statice
-└── CLAUDE.md                 # Acest fișier
+├── CLAUDE.md                 # Acest fișier
+└── .git/                     # Repo: git@github.com:danielbors72/simple-chessmate.git
 ```
 
 ## Proiect
@@ -36,8 +34,9 @@ Aplicație de șah funcțională pentru web și telefon (PWA). Scop principal: 7
 - [x] Faza 0: Setup & Tooling — proiect Vite, structură foldere, Git
 - [x] Faza 1: Tabla de șah — grid 8x8, piese SVG cburnett, responsive
 - [x] Faza 2: Logica jocului — chess.js, click-to-move, highlight mutări, șah vizual pe rege
-- [x] Faza 3: Adversarul AI — Stockfish 18, 3 nivele (easy/medium/hard), undo, status, istoric
-- [ ] Faza 4: Puzzle-uri tactice — colecție + tracking progres
+- [x] Faza 3: Adversarul AI — Stockfish 18 + 8 motoare istorice, undo, status, istoric, galerie motoare
+- [x] Faza 4: Puzzle-uri tactice — colecție + tracking progres
+- [ ] Faza 4b: Motor vs Motor — AI vs AI cu selectare motoare independente
 - [ ] Faza 5: PWA — instalare pe telefon, offline
 - [ ] Faza 6: Polish & Deploy — design final, Vercel, live
 
@@ -54,3 +53,4 @@ Aplicație de șah funcțională pentru web și telefon (PWA). Scop principal: 7
 - Mega-prompt complet: `plans/2026-03-29-chess-app-prompt.md`
 - Ghid pedagogic (construcție pas cu pas): `plans/ghid-pedagogic.md`
 - Arhitectura proiectului: `plans/arhitectura.md`
+- Research motoare istorice: `plans/research_chess_engines.md`
