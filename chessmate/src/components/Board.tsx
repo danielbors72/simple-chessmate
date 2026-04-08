@@ -36,6 +36,8 @@ function findKingSquare(game: Chess): string | null {
   return null
 }
 
+type GameMode = 'human-vs-ai' | 'ai-vs-ai'
+
 type LastMove = { from: string; to: string } | null
 type AnimatingPiece = {
   pieceCode: string
@@ -54,11 +56,21 @@ function Board() {
   const [lastMove, setLastMove] = useState<LastMove>(null)
   const [animating, setAnimating] = useState<AnimatingPiece>(null)
 
-  // Motor curent + nivel de dificultate
+  // Mod de joc: om vs motor sau motor vs motor
+  const [gameMode, setGameMode] = useState<GameMode>('human-vs-ai')
+
+  // Motor negru (existent) + motor alb (AI vs AI)
   const [engine, setEngine] = useState<ChessEngine>(DEFAULT_ENGINE)
   const [difficultyIndex, setDifficultyIndex] = useState(1)
+  const [engineWhite, setEngineWhite] = useState<ChessEngine>(DEFAULT_ENGINE)
+  const [diffWhiteIndex, setDiffWhiteIndex] = useState(1)
   const engineRef = useRef(engine)
+  const engineWhiteRef = useRef(engineWhite)
   const boardRef = useRef<HTMLDivElement>(null)
+
+  // Controluri AI vs AI: pauză și viteză
+  const [paused, setPaused] = useState(false)
+  const [autoPlaySpeed, setAutoPlaySpeed] = useState(1500) // ms între mutări
 
   const gameOver = game.isGameOver()
   const inCheck = game.inCheck()
@@ -106,12 +118,21 @@ function Board() {
     return true
   }, [game])
 
-  // Pornește motorul la prima încărcare + la schimbare motor
+  // Pornește motorul negru la prima încărcare + la schimbare motor
   useEffect(() => {
     engineRef.current = engine
     engine.init()
     return () => engine.destroy()
   }, [engine])
+
+  // Pornește motorul alb (doar pentru AI vs AI)
+  useEffect(() => {
+    engineWhiteRef.current = engineWhite
+    if (gameMode === 'ai-vs-ai') {
+      engineWhite.init()
+      return () => engineWhite.destroy()
+    }
+  }, [engineWhite, gameMode])
 
   // Când e rândul negrului (AI), cere mutare de la motor
   useEffect(() => {
