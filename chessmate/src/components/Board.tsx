@@ -1,9 +1,9 @@
-// Board.tsx — Tabla de șah interactivă cu motoare selectabile
-// Albul = jucătorul, Negrul = motorul ales
+// Board.tsx — Tabla de șah (doar render)
+// Toată logica e în useChessGame hook
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { Chess, type Square as Sq } from 'chess.js'
-import { ENGINES, DEFAULT_ENGINE, type ChessEngine } from '../engine/engines'
+import { useRef, useEffect } from 'react'
+import type { Square as Sq } from 'chess.js'
+import { useChessGame, posToGrid } from '../hooks/useChessGame'
 import Square from './Square'
 import MoveArrow from './MoveArrow'
 import GameInfo from './GameInfo'
@@ -12,370 +12,21 @@ import './Board.css'
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
 const RANKS = [8, 7, 6, 5, 4, 3, 2, 1]
 
-// Convertește o poziție algebrică ("e4") în coordonate grid (col, row)
-function posToGrid(pos: string): { col: number; row: number } {
-  return {
-    col: FILES.indexOf(pos[0]),
-    row: RANKS.indexOf(Number(pos[1])),
-  }
-}
-
-function toPieceCode(piece: { color: string; type: string }): string {
-  return piece.color + piece.type.toUpperCase()
-}
-
-function findKingSquare(game: Chess): string | null {
-  const turn = game.turn()
-  for (const rank of RANKS) {
-    for (const file of FILES) {
-      const pos = `${file}${rank}`
-      const piece = game.get(pos as Sq)
-      if (piece && piece.type === 'k' && piece.color === turn) return pos
-    }
-  }
-  return null
-}
-
-type GameMode = 'human-vs-ai' | 'ai-vs-ai'
-
-type LastMove = { from: string; to: string } | null
-type AnimatingPiece = {
-  pieceCode: string
-  fromCol: number; fromRow: number
-  toCol: number; toRow: number
-  duration: number  // durata animației în ms
-} | null
-
 function Board() {
-  const [game, setGame] = useState(new Chess())
-  const [selected, setSelected] = useState<string | null>(null)
-  const [legalMoves, setLegalMoves] = useState<string[]>([])
-  const [history, setHistory] = useState<string[]>([])
-  const [moveHistory, setMoveHistory] = useState<LastMove[]>([]) // săgeți paralele cu history
-  const [thinking, setThinking] = useState(false)
-  const [lastMove, setLastMove] = useState<LastMove>(null)
-  const [animating, setAnimating] = useState<AnimatingPiece>(null)
+  const {
+    game, selected, legalMoves, thinking, lastMove, animating,
+    gameMode, gameOver, kingSquare, isPlayerTurn,
+    engine, engines, engineWhite,
+    difficultyIndex, diffWhiteIndex,
+    playing, autoPlaySpeed,
+    canUndo, canUndoAiVsAi,
+    handleSquareClick, handleNewGame, handleUndo, handleUndoAiVsAi,
+    handleEngineChange, handleEngineWhiteChange, handleModeChange,
+    handleStep, setDifficultyIndex, setDiffWhiteIndex,
+    setPlaying, setAutoPlaySpeed,
+  } = useChessGame()
 
-  // Mod de joc: om vs motor sau motor vs motor
-  const [gameMode, setGameMode] = useState<GameMode>('human-vs-ai')
-
-  // Motor negru (existent) + motor alb (AI vs AI)
-  const [engine, setEngine] = useState<ChessEngine>(DEFAULT_ENGINE)
-  const [difficultyIndex, setDifficultyIndex] = useState(1)
-  const [engineWhite, setEngineWhite] = useState<ChessEngine>(DEFAULT_ENGINE)
-  const [diffWhiteIndex, setDiffWhiteIndex] = useState(1)
-  const engineRef = useRef(engine)
-  const engineWhiteRef = useRef(engineWhite)
   const boardRef = useRef<HTMLDivElement>(null)
-
-  // Controluri AI vs AI
-  const [playing, setPlaying] = useState(false)       // false = neînceput sau pauză
-  const [stepRequested, setStepRequested] = useState(false) // true = execută o singură mutare
-  const [autoPlaySpeed, setAutoPlaySpeed] = useState(1500)  // ms între mutări în auto-play
-  const autoPlaySpeedRef = useRef(autoPlaySpeed)
-  autoPlaySpeedRef.current = autoPlaySpeed
-
-  const gameOver = game.isGameOver()
-  const inCheck = game.inCheck()
-  const kingSquare = inCheck ? findKingSquare(game) : null
-  const isPlayerTurn = game.turn() === 'w'
-
-  // Execută o mutare cu animație
-  // isPlayer = true → animație 1s, false (AI) → animație 0.5s
-  const executeMove = useCallback((from: string, to: string, promotion?: string, isPlayer = false) => {
-    const fromGrid = posToGrid(from)
-    const toGrid = posToGrid(to)
-
-    // Piesa care se mută (înainte de mutare)
-    const piece = game.get(from as Sq)
-    if (!piece) return false
-
-    // Dacă e promoție, folosim piesa promovată
-    const promoType = promotion || (piece.type === 'p' && (to[1] === '8' || to[1] === '1') ? 'q' : undefined)
-    const pieceCode = promoType
-      ? piece.color + promoType.toUpperCase()
-      : toPieceCode(piece)
-
-    const fenBefore = game.fen()
-    const move = game.move({ from, to, promotion: promoType })
-    if (!move) return false
-
-    const duration = isPlayer ? 1000 : 500
-
-    // Pornește animația
-    setAnimating({
-      pieceCode,
-      fromCol: fromGrid.col, fromRow: fromGrid.row,
-      toCol: toGrid.col, toRow: toGrid.row,
-      duration,
-    })
-
-    const arrow: LastMove = { from, to }
-    setHistory(prev => [...prev, fenBefore])
-    setMoveHistory(prev => [...prev, lastMove]) // salvăm săgeata anterioară
-    setLastMove(arrow)
-    setGame(new Chess(game.fen()))
-
-    // Oprește animația după durata completă
-    setTimeout(() => setAnimating(null), duration)
-    return true
-  }, [game])
-
-  // Pornește motorul negru la prima încărcare + la schimbare motor
-  useEffect(() => {
-    engineRef.current = engine
-    engine.init()
-    return () => engine.destroy()
-  }, [engine])
-
-  // Pornește motorul alb (doar pentru AI vs AI)
-  useEffect(() => {
-    engineWhiteRef.current = engineWhite
-    if (gameMode === 'ai-vs-ai') {
-      engineWhite.init()
-      return () => engineWhite.destroy()
-    }
-  }, [engineWhite, gameMode])
-
-  // Când e rândul negrului (AI) — doar în modul Human vs AI
-  useEffect(() => {
-    if (gameMode !== 'human-vs-ai') return
-    if (!isPlayerTurn && !gameOver) {
-      setThinking(true)
-      const currentEngine = engineRef.current
-      const level = currentEngine.difficulty[difficultyIndex]?.value ?? currentEngine.difficulty[0].value
-
-      currentEngine.findBestMove(game.fen(), level).then((bestMove) => {
-        if (engineRef.current !== currentEngine) return
-
-        // Delay 1s înainte de mutarea AI — ca să pară că "gândește"
-        setTimeout(() => {
-          if (engineRef.current !== currentEngine) return
-
-          const from = bestMove.slice(0, 2)
-          const to = bestMove.slice(2, 4)
-          const promotion = bestMove.length > 4 ? bestMove[4] : undefined
-
-          executeMove(from, to, promotion)
-          setThinking(false)
-        }, 1000)
-      })
-    }
-  }, [game, gameMode, isPlayerTurn, gameOver, difficultyIndex, executeMove])
-
-  // AI vs AI: pregătește mutarea (motorul gândește), apoi așteaptă trigger
-  const pendingMoveRef = useRef<string | null>(null)
-
-  // Pas 1: când e tura cuiva, cere motorului să gândească
-  useEffect(() => {
-    if (gameMode !== 'ai-vs-ai' || gameOver) return
-    if (pendingMoveRef.current) return // deja are mutare gata
-
-    const turn = game.turn()
-    const currentEngine = turn === 'w' ? engineWhiteRef.current : engineRef.current
-    const level = turn === 'w'
-      ? currentEngine.difficulty[diffWhiteIndex]?.value ?? currentEngine.difficulty[0].value
-      : currentEngine.difficulty[difficultyIndex]?.value ?? currentEngine.difficulty[0].value
-
-    setThinking(true)
-
-    currentEngine.findBestMove(game.fen(), level).then((bestMove) => {
-      const stillCurrent = turn === 'w'
-        ? engineWhiteRef.current === currentEngine
-        : engineRef.current === currentEngine
-      if (!stillCurrent) return
-
-      pendingMoveRef.current = bestMove
-      setThinking(false)
-
-      // Dacă auto-play e activ, execută cu delay
-      if (playing) {
-        setTimeout(() => {
-          if (pendingMoveRef.current) {
-            applyPendingMove()
-          }
-        }, autoPlaySpeedRef.current)
-      }
-    })
-  }, [game, gameMode, gameOver, difficultyIndex, diffWhiteIndex])
-
-  // Aplică mutarea pregătită
-  const applyPendingMove = useCallback(() => {
-    const bestMove = pendingMoveRef.current
-    if (!bestMove) return
-
-    pendingMoveRef.current = null
-    const from = bestMove.slice(0, 2)
-    const to = bestMove.slice(2, 4)
-    const promotion = bestMove.length > 4 ? bestMove[4] : undefined
-
-    executeMove(from, to, promotion)
-    setStepRequested(false)
-  }, [executeMove])
-
-  // Pas 2: step manual — execută mutarea pregătită imediat
-  useEffect(() => {
-    if (!stepRequested || !pendingMoveRef.current) return
-    applyPendingMove()
-  }, [stepRequested, applyPendingMove])
-
-  // Pas 3: auto-play continuu — când o mutare se termină, programează următoarea
-  useEffect(() => {
-    if (gameMode !== 'ai-vs-ai' || !playing || gameOver) return
-    if (!pendingMoveRef.current) return
-
-    const timer = setTimeout(() => {
-      if (pendingMoveRef.current) {
-        applyPendingMove()
-      }
-    }, autoPlaySpeedRef.current)
-
-    return () => clearTimeout(timer)
-  }, [game, gameMode, playing, gameOver, applyPendingMove])
-
-  // Schimbă modul de joc (Human vs AI ↔ AI vs AI)
-  const handleModeChange = useCallback((mode: GameMode) => {
-    if (mode === gameMode) return
-    setGameMode(mode)
-    setGame(new Chess())
-    setSelected(null)
-    setLegalMoves([])
-    setHistory([])
-    setMoveHistory([])
-    setThinking(false)
-    setLastMove(null)
-    setAnimating(null)
-    setPlaying(false)
-    setStepRequested(false)
-  }, [gameMode])
-
-  // Schimbă motorul alb (AI vs AI)
-  const handleEngineWhiteChange = useCallback((engineName: string) => {
-    const newEngine = ENGINES.find(e => e.name === engineName)
-    if (!newEngine || newEngine === engineWhite) return
-
-    engineWhite.destroy()
-    setEngineWhite(newEngine)
-    setDiffWhiteIndex(0)
-    setGame(new Chess())
-    setSelected(null)
-    setLegalMoves([])
-    setHistory([])
-    setMoveHistory([])
-    setThinking(false)
-    setLastMove(null)
-    setAnimating(null)
-  }, [engineWhite])
-
-  const handleEngineChange = useCallback((engineName: string) => {
-    const newEngine = ENGINES.find(e => e.name === engineName)
-    if (!newEngine || newEngine === engine) return
-
-    engine.destroy()
-    setEngine(newEngine)
-    setDifficultyIndex(0)
-    setGame(new Chess())
-    setSelected(null)
-    setLegalMoves([])
-    setHistory([])
-    setMoveHistory([])
-    setThinking(false)
-    setLastMove(null)
-    setAnimating(null)
-  }, [engine])
-
-  // Undo în AI vs AI — revine o mutare, păstrează săgeata
-  const handleUndoAiVsAi = useCallback(() => {
-    if (history.length < 1 || thinking) return
-    const prevFen = history[history.length - 1]
-    setGame(new Chess(prevFen))
-    setHistory(prev => prev.slice(0, -1))
-    setMoveHistory(prev => prev.slice(0, -1))
-    setAnimating(null)
-    setPlaying(false)
-    setStepRequested(false)
-
-    // Restaurăm săgeata mutării anterioare
-    const restoredArrow = moveHistory.length >= 1 ? moveHistory[moveHistory.length - 1] : null
-    setLastMove(restoredArrow)
-  }, [history, moveHistory, thinking])
-
-  // Următoarea mutare (step manual) — funcționează și în timpul gândirii
-  const handleStep = useCallback(() => {
-    if (gameOver) return
-    setStepRequested(true)
-  }, [gameOver])
-
-  // Tastatura: Space = next move în AI vs AI
-  useEffect(() => {
-    if (gameMode !== 'ai-vs-ai') return
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        e.preventDefault()
-        if (!gameOver) setStepRequested(true)
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [gameMode, gameOver])
-
-  const handleSquareClick = useCallback((position: string) => {
-    // În AI vs AI, click pe tablă = următoarea mutare
-    if (gameMode === 'ai-vs-ai') {
-      if (!gameOver) setStepRequested(true)
-      return
-    }
-    if (gameOver || !isPlayerTurn || thinking || animating) return
-
-    if (selected && legalMoves.includes(position)) {
-      executeMove(selected, position, undefined, true)
-      setSelected(null)
-      setLegalMoves([])
-      return
-    }
-
-    const piece = game.get(position as Sq)
-    if (piece && piece.color === 'w') {
-      const moves = game.moves({ square: position as Sq, verbose: true })
-      if (moves.length > 0) {
-        setSelected(position)
-        setLegalMoves(moves.map(m => m.to))
-      } else {
-        setSelected(null)
-        setLegalMoves([])
-      }
-    } else {
-      setSelected(null)
-      setLegalMoves([])
-    }
-  }, [game, selected, legalMoves, gameOver, isPlayerTurn, thinking, animating, executeMove])
-
-  const handleNewGame = useCallback(() => {
-    setGame(new Chess())
-    setSelected(null)
-    setLegalMoves([])
-    setHistory([])
-    setMoveHistory([])
-    setThinking(false)
-    setLastMove(null)
-    setAnimating(null)
-  }, [])
-
-  const handleUndo = useCallback(() => {
-    if (history.length < 2) return
-    const prevFen = history[history.length - 2]
-    setGame(new Chess(prevFen))
-    setHistory(prev => prev.slice(0, -2))
-    setMoveHistory(prev => prev.slice(0, -2))
-    setSelected(null)
-    setLegalMoves([])
-    setAnimating(null)
-
-    // Restaurăm săgeata de dinainte de cele 2 mutări anulate
-    const restoredArrow = moveHistory.length >= 2 ? moveHistory[moveHistory.length - 2] : null
-    setLastMove(restoredArrow)
-  }, [history, moveHistory])
 
   return (
     <div className="board-wrapper">
@@ -429,11 +80,11 @@ function Board() {
       </div>
       <GameInfo
         game={game}
-        canUndo={history.length >= 2 && isPlayerTurn}
+        canUndo={canUndo}
         onNewGame={handleNewGame}
         onUndo={handleUndo}
         engine={engine}
-        engines={ENGINES}
+        engines={engines}
         onEngineChange={handleEngineChange}
         difficultyIndex={difficultyIndex}
         onDifficultyChange={setDifficultyIndex}
@@ -448,7 +99,7 @@ function Board() {
         onPlayToggle={() => setPlaying(p => !p)}
         onStep={handleStep}
         onUndoAiVsAi={handleUndoAiVsAi}
-        canUndoAiVsAi={history.length >= 1 && !thinking}
+        canUndoAiVsAi={canUndoAiVsAi}
         autoPlaySpeed={autoPlaySpeed}
         onSpeedChange={setAutoPlaySpeed}
       />
@@ -472,7 +123,6 @@ function AnimatedPiece({ pieceCode, fromCol, fromRow, toCol, toRow, duration }: 
     el.classList.add('animate-to')
   }, [])
 
-  // Pozițiile ca procente (fiecare pătrat = 12.5%)
   const fromX = fromCol * 12.5
   const fromY = fromRow * 12.5
   const toX = toCol * 12.5
@@ -500,8 +150,11 @@ function AnimatedPiece({ pieceCode, fromCol, fromRow, toCol, toRow, duration }: 
   )
 }
 
-// Helper — obține URL-ul SVG pentru o piesă
-// Importurile sunt statice în Piece.tsx, aici le accesăm dinamic
+function toPieceCode(piece: { color: string; type: string }): string {
+  return piece.color + piece.type.toUpperCase()
+}
+
+// Importuri piese SVG
 import wK from '../assets/pieces/wK.svg'
 import wQ from '../assets/pieces/wQ.svg'
 import wR from '../assets/pieces/wR.svg'

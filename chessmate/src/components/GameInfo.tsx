@@ -2,9 +2,8 @@
 
 import { Chess } from 'chess.js'
 import type { ChessEngine } from '../engine/engines'
+import type { GameMode } from '../hooks/useChessGame'
 import './GameInfo.css'
-
-type GameMode = 'human-vs-ai' | 'ai-vs-ai'
 
 type GameInfoProps = {
   game: Chess
