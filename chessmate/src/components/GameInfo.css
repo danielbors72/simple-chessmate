@@ -22,60 +22,6 @@
   text-transform: lowercase;
 }
 
-/* Butoane */
-.controls {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-}
-
-.controls button {
-  background: transparent;
-  color: #999;
-  border: 1px solid #333;
-  border-radius: 3px;
-  padding: 6px 16px;
-  font-size: 0.75rem;
-  font-family: inherit;
-  letter-spacing: 0.3px;
-  text-transform: lowercase;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.controls button:hover:not(:disabled) {
-  color: #ccc;
-  border-color: #555;
-}
-
-.controls button:disabled,
-.controls select:disabled {
-  opacity: 0.25;
-  cursor: default;
-}
-
-.controls select {
-  background: transparent;
-  color: #999;
-  border: 1px solid #333;
-  border-radius: 3px;
-  padding: 5px 10px;
-  font-size: 0.75rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.controls select:hover:not(:disabled) {
-  color: #ccc;
-  border-color: #555;
-}
-
-.controls select option {
-  background: #1a1a1a;
-  color: #ccc;
-}
-
 /* Selector mod de joc */
 .mode-selector {
   display: flex;
@@ -170,23 +116,117 @@
   color: #ccc;
 }
 
-/* Slider viteză — sub butoane */
+/* Grup controluri AI vs AI */
+.controls-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Transport — butoane media player (⏮ ▶ ⏭) */
+.transport {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.transport-btn {
+  background: transparent;
+  color: #777;
+  border: 1px solid #333;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.transport-btn.primary {
+  width: 44px;
+  height: 44px;
+  font-size: 1.1rem;
+  color: #aaa;
+  border-color: #444;
+}
+
+.transport-btn:hover:not(:disabled) {
+  color: #ccc;
+  border-color: #555;
+  background: #2a2a2a;
+}
+
+.transport-btn:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+/* Slider viteză */
 .speed-control {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
-.speed-control label {
-  font-size: 0.68rem;
-  color: #555;
+.speed-label {
+  font-size: 0.62rem;
+  color: #444;
   text-transform: lowercase;
+  min-width: 28px;
+}
+
+.speed-label:first-child {
+  text-align: right;
+}
+
+.speed-label:last-child {
+  text-align: left;
 }
 
 .speed-control input[type="range"] {
-  width: 120px;
+  width: 140px;
   accent-color: #555;
+}
+
+/* Butoane standard (Undo, Joc nou) */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.controls button {
+  background: transparent;
+  color: #999;
+  border: 1px solid #333;
+  border-radius: 3px;
+  padding: 6px 16px;
+  font-size: 0.75rem;
+  font-family: inherit;
+  letter-spacing: 0.3px;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.controls button:hover:not(:disabled) {
+  color: #ccc;
+  border-color: #555;
+}
+
+.controls button:disabled,
+.controls select:disabled {
+  opacity: 0.25;
+  cursor: default;
 }
 
 /* Hint tastatură */

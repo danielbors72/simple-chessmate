@@ -1,4 +1,4 @@
-// GameInfo.tsx — Status joc, selector mod, motoare, dificultate, controls AI vs AI, istoric
+// GameInfo.tsx — Panou control joc: status, mod, motoare, acțiuni, istoric
 
 import { Chess } from 'chess.js'
 import type { ChessEngine } from '../engine/engines'
@@ -16,7 +16,6 @@ type GameInfoProps = {
   difficultyIndex: number
   onDifficultyChange: (i: number) => void
   thinking: boolean
-  // AI vs AI
   gameMode: GameMode
   onModeChange: (mode: GameMode) => void
   engineWhite: ChessEngine
@@ -42,7 +41,6 @@ function getStatus(game: Chess, thinking: boolean, engineName: string, gameMode:
   if (game.isDraw()) return 'Remiză'
 
   if (gameMode === 'ai-vs-ai') {
-    // Jocul nu a început încă
     if (!playing && game.history().length === 0 && !thinking) {
       return 'alege motoarele și apasă start'
     }
@@ -69,6 +67,35 @@ function formatMoveHistory(game: Chess): string[] {
   return pairs
 }
 
+// Selector motor + dificultate (reutilizabil)
+function EngineSelector({ label, engine, engines, diffIndex, onEngineChange, onDiffChange, disabled }: {
+  label?: string
+  engine: ChessEngine
+  engines: ChessEngine[]
+  diffIndex: number
+  onEngineChange: (name: string) => void
+  onDiffChange: (i: number) => void
+  disabled: boolean
+}) {
+  return (
+    <div className="engine-row">
+      {label && <span className="engine-label">{label}</span>}
+      <select value={engine.name} onChange={e => onEngineChange(e.target.value)} disabled={disabled}>
+        {engines.map(e => (
+          <option key={e.name} value={e.name}>{e.name} ({e.year})</option>
+        ))}
+      </select>
+      {engine.difficulty.length > 1 && (
+        <select value={diffIndex} onChange={e => onDiffChange(Number(e.target.value))} disabled={disabled}>
+          {engine.difficulty.map((d, i) => (
+            <option key={i} value={i}>{d.label}</option>
+          ))}
+        </select>
+      )}
+    </div>
+  )
+}
+
 function GameInfo({
   game, canUndo, onNewGame, onUndo,
   engine, engines, onEngineChange,
@@ -85,12 +112,15 @@ function GameInfo({
   const moves = formatMoveHistory(game)
   const isAiVsAi = gameMode === 'ai-vs-ai'
   const gameOver = game.isGameOver()
+  const engineDisabled = thinking || (isAiVsAi && playing)
 
   return (
     <div className="game-info">
+
+      {/* ── Secțiunea 1: Status ── */}
       <div className="status">{status}</div>
 
-      {/* Selector mod de joc */}
+      {/* ── Secțiunea 2: Mod de joc (toggle) ── */}
       <div className="mode-selector">
         <button
           className={`mode-btn ${!isAiVsAi ? 'active' : ''}`}
@@ -108,101 +138,78 @@ function GameInfo({
         </button>
       </div>
 
-      {/* Selectoare motoare */}
+      {/* ── Secțiunea 3: Motoare ── */}
       <div className="engine-selectors">
         {isAiVsAi && (
-          <div className="engine-row">
-            <span className="engine-label">alb</span>
-            <select
-              value={engineWhite.name}
-              onChange={(e) => onEngineWhiteChange(e.target.value)}
-              disabled={thinking || playing}
-            >
-              {engines.map(e => (
-                <option key={e.name} value={e.name}>{e.name} ({e.year})</option>
-              ))}
-            </select>
-            {engineWhite.difficulty.length > 1 && (
-              <select
-                value={diffWhiteIndex}
-                onChange={(e) => onDiffWhiteChange(Number(e.target.value))}
-                disabled={thinking || playing}
-              >
-                {engineWhite.difficulty.map((d, i) => (
-                  <option key={i} value={i}>{d.label}</option>
-                ))}
-              </select>
-            )}
-          </div>
+          <EngineSelector
+            label="alb"
+            engine={engineWhite}
+            engines={engines}
+            diffIndex={diffWhiteIndex}
+            onEngineChange={onEngineWhiteChange}
+            onDiffChange={onDiffWhiteChange}
+            disabled={engineDisabled}
+          />
         )}
-        <div className="engine-row">
-          {isAiVsAi && <span className="engine-label">negru</span>}
-          <select
-            value={engine.name}
-            onChange={(e) => onEngineChange(e.target.value)}
-            disabled={thinking || (isAiVsAi && playing)}
-          >
-            {engines.map(e => (
-              <option key={e.name} value={e.name}>{e.name} ({e.year})</option>
-            ))}
-          </select>
-          {engine.difficulty.length > 1 && (
-            <select
-              value={difficultyIndex}
-              onChange={(e) => onDifficultyChange(Number(e.target.value))}
-              disabled={thinking || (isAiVsAi && playing)}
-            >
-              {engine.difficulty.map((d, i) => (
-                <option key={i} value={i}>{d.label}</option>
-              ))}
-            </select>
+        <EngineSelector
+          label={isAiVsAi ? 'negru' : undefined}
+          engine={engine}
+          engines={engines}
+          diffIndex={difficultyIndex}
+          onEngineChange={onEngineChange}
+          onDiffChange={onDifficultyChange}
+          disabled={engineDisabled}
+        />
+      </div>
+
+      {/* ── Secțiunea 4: Acțiuni ── */}
+      {isAiVsAi ? (
+        <div className="controls-group">
+          {/* Rând 1: transport (play/pause, pas, înapoi) */}
+          <div className="transport">
+            <button className="transport-btn" onClick={onUndoAiVsAi} disabled={!canUndoAiVsAi || playing} title="Înapoi o mutare">
+              ⏮
+            </button>
+            <button className="transport-btn primary" onClick={onPlayToggle} disabled={gameOver} title={playing ? 'Pauză' : 'Start'}>
+              {playing ? '⏸' : '▶'}
+            </button>
+            <button className="transport-btn" onClick={onStep} disabled={gameOver} title="Următoarea mutare (sau Space / click pe tablă)">
+              ⏭
+            </button>
+          </div>
+
+          {/* Rând 2: slider viteză */}
+          <div className="speed-control">
+            <span className="speed-label">lent</span>
+            <input
+              type="range"
+              min={0}
+              max={3000}
+              step={100}
+              value={3000 - autoPlaySpeed}
+              onChange={(e) => onSpeedChange(3000 - Number(e.target.value))}
+            />
+            <span className="speed-label">rapid</span>
+          </div>
+
+          {/* Rând 3: joc nou */}
+          <div className="controls">
+            <button onClick={onNewGame}>Joc nou</button>
+          </div>
+
+          {/* Hint */}
+          {!playing && !gameOver && (
+            <div className="keyboard-hint">click pe tablă sau spațiu = următoarea mutare</div>
           )}
         </div>
-      </div>
-
-      {/* Controls */}
-      <div className="controls">
-        {isAiVsAi ? (
-          <>
-            <button onClick={onPlayToggle} disabled={gameOver}>
-              {playing ? '⏸ Pauză' : '▶ Start'}
-            </button>
-            <button onClick={onStep} disabled={gameOver}>
-              ⏭ Pas
-            </button>
-            <button onClick={onUndoAiVsAi} disabled={!canUndoAiVsAi || playing}>
-              ↩ Înapoi
-            </button>
-            <button onClick={onNewGame}>Joc nou</button>
-          </>
-        ) : (
-          <>
-            <button onClick={onUndo} disabled={!canUndo || thinking}>Undo</button>
-            <button onClick={onNewGame}>Joc nou</button>
-          </>
-        )}
-      </div>
-
-      {/* Slider viteză — doar în AI vs AI, stânga=lent, dreapta=rapid */}
-      {isAiVsAi && (
-        <div className="speed-control">
-          <label>Viteză auto-play</label>
-          <input
-            type="range"
-            min={0}
-            max={3000}
-            step={100}
-            value={3000 - autoPlaySpeed}
-            onChange={(e) => onSpeedChange(3000 - Number(e.target.value))}
-          />
+      ) : (
+        <div className="controls">
+          <button onClick={onUndo} disabled={!canUndo || thinking}>Undo</button>
+          <button onClick={onNewGame}>Joc nou</button>
         </div>
       )}
 
-      {/* Hint tastatură */}
-      {isAiVsAi && !playing && !gameOver && (
-        <div className="keyboard-hint">click pe tablă sau spațiu = următoarea mutare</div>
-      )}
-
+      {/* ── Secțiunea 5: Istoric mutări ── */}
       {moves.length > 0 && (
         <div className="move-history">
           {moves.map((pair, i) => (

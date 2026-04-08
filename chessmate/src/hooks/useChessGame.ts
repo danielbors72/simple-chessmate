@@ -178,15 +178,8 @@ export function useChessGame() {
       if (!stillCurrent) return
 
       pendingMoveRef.current = bestMove
+      // Forțează re-render ca efectul auto-play (Pas 3) să detecteze mutarea
       setThinking(false)
-
-      if (playing) {
-        setTimeout(() => {
-          if (pendingMoveRef.current) {
-            applyPendingMove()
-          }
-        }, autoPlaySpeedRef.current)
-      }
     })
   }, [game, gameMode, gameOver, difficultyIndex, diffWhiteIndex])
 
@@ -210,7 +203,7 @@ export function useChessGame() {
     applyPendingMove()
   }, [stepRequested, applyPendingMove])
 
-  // Pas 3: auto-play continuu
+  // Pas 3: auto-play continuu — thinking în deps ca trigger de re-render
   useEffect(() => {
     if (gameMode !== 'ai-vs-ai' || !playing || gameOver) return
     if (!pendingMoveRef.current) return
@@ -222,10 +215,11 @@ export function useChessGame() {
     }, autoPlaySpeedRef.current)
 
     return () => clearTimeout(timer)
-  }, [game, gameMode, playing, gameOver, applyPendingMove])
+  }, [game, gameMode, playing, gameOver, thinking, applyPendingMove])
 
   // Resetare state helper
   const resetState = useCallback(() => {
+    pendingMoveRef.current = null
     setGame(new Chess())
     setSelected(null)
     setLegalMoves([])
@@ -235,6 +229,23 @@ export function useChessGame() {
     setLastMove(null)
     setAnimating(null)
   }, [])
+
+  // Wake Lock — ecranul rămâne activ în AI vs AI (ca la un video YouTube)
+  useEffect(() => {
+    if (gameMode !== 'ai-vs-ai' || !playing || gameOver) return
+
+    let wakeLock: WakeLockSentinel | null = null
+
+    navigator.wakeLock?.request('screen').then(lock => {
+      wakeLock = lock
+    }).catch(() => {
+      // Wake Lock indisponibil — ignorăm silențios
+    })
+
+    return () => {
+      wakeLock?.release()
+    }
+  }, [gameMode, playing, gameOver])
 
   // Schimbă modul de joc (Human vs AI ↔ AI vs AI)
   const handleModeChange = useCallback((mode: GameMode) => {
