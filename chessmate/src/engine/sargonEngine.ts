@@ -86,32 +86,40 @@ class SargonEngineImpl implements ChessEngine {
   async init(): Promise<void> {}
 
   async findBestMove(fen: string, depth: number): Promise<string> {
-    const game = new Chess(fen)
-    const moves = game.moves({ verbose: true })
-    if (moves.length === 0) throw new Error('No legal moves')
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        try {
+          const game = new Chess(fen)
+          const moves = game.moves({ verbose: true })
+          if (moves.length === 0) throw new Error('No legal moves')
 
-    // Sortare inițială — capturi primele
-    moves.sort((a, b) => {
-      const sa = a.captured ? PIECE_VALUE[a.captured] : 0
-      const sb = b.captured ? PIECE_VALUE[b.captured] : 0
-      return sb - sa
+          // Sortare inițială — capturi primele
+          moves.sort((a, b) => {
+            const sa = a.captured ? PIECE_VALUE[a.captured] : 0
+            const sb = b.captured ? PIECE_VALUE[b.captured] : 0
+            return sb - sa
+          })
+
+          let bestMove = moves[0]
+          let bestScore = -Infinity
+
+          for (const move of moves) {
+            game.move(move)
+            const score = -alphabeta(game, depth - 1, -Infinity, Infinity)
+            game.undo()
+
+            if (score > bestScore) {
+              bestScore = score
+              bestMove = move
+            }
+          }
+
+          resolve(bestMove.from + bestMove.to + (bestMove.promotion || ''))
+        } catch (e) {
+          reject(e)
+        }
+      }, 0)
     })
-
-    let bestMove = moves[0]
-    let bestScore = -Infinity
-
-    for (const move of moves) {
-      game.move(move)
-      const score = -alphabeta(game, depth - 1, -Infinity, Infinity)
-      game.undo()
-
-      if (score > bestScore) {
-        bestScore = score
-        bestMove = move
-      }
-    }
-
-    return bestMove.from + bestMove.to + (bestMove.promotion || '')
   }
 
   destroy() {}
