@@ -15,7 +15,7 @@ const RANKS = [8, 7, 6, 5, 4, 3, 2, 1]
 function Board() {
   const {
     game, selected, legalMoves, thinking, lastMove, animating,
-    gameMode, gameOver, kingSquare, isPlayerTurn,
+    gameMode, kingSquare,
     engine, engines, engineWhite,
     difficultyIndex, diffWhiteIndex,
     playing, autoPlaySpeed,
