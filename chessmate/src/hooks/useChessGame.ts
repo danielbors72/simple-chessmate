@@ -72,6 +72,9 @@ export function useChessGame() {
   const autoPlaySpeedRef = useRef(autoPlaySpeed)
   autoPlaySpeedRef.current = autoPlaySpeed
 
+  // Contor generație — invalidează rezultatele de gândire stale după reset/schimbare mod
+  const thinkingGenRef = useRef(0)
+
   // Derived values
   const gameOver = game.isGameOver()
   const inCheck = game.inCheck()
@@ -122,9 +125,11 @@ export function useChessGame() {
   }, [engine])
 
   // Pornește motorul alb (doar pentru AI vs AI)
+  // Dacă engineWhite e aceeași instanță ca engineBlack (e.g. ambele Stockfish la start),
+  // nu inițializăm/distrugem separat — efectul engine-ului negru deja le gestionează
   useEffect(() => {
     engineWhiteRef.current = engineWhite
-    if (gameMode === 'ai-vs-ai') {
+    if (gameMode === 'ai-vs-ai' && engineWhite !== engineRef.current) {
       engineWhite.init()
       return () => engineWhite.destroy()
     }
@@ -170,8 +175,11 @@ export function useChessGame() {
       : currentEngine.difficulty[difficultyIndex]?.value ?? currentEngine.difficulty[0].value
 
     setThinking(true)
+    const gen = thinkingGenRef.current
 
     currentEngine.findBestMove(game.fen(), level).then((bestMove) => {
+      // Ignoră rezultat stale (după reset, schimbare motor sau mod)
+      if (thinkingGenRef.current !== gen) return
       const stillCurrent = turn === 'w'
         ? engineWhiteRef.current === currentEngine
         : engineRef.current === currentEngine
@@ -198,10 +206,12 @@ export function useChessGame() {
   }, [executeMove])
 
   // Pas 2: step manual — execută mutarea pregătită imediat
+  // `thinking` în deps: dacă motorul termina gânditul DUPĂ ce userul a apăsat Pas,
+  // efectul se re-rulează și aplică mutarea acum gata
   useEffect(() => {
     if (!stepRequested || !pendingMoveRef.current) return
     applyPendingMove()
-  }, [stepRequested, applyPendingMove])
+  }, [stepRequested, thinking, applyPendingMove])
 
   // Pas 3: auto-play continuu — thinking în deps ca trigger de re-render
   useEffect(() => {
@@ -219,6 +229,7 @@ export function useChessGame() {
 
   // Resetare state helper
   const resetState = useCallback(() => {
+    thinkingGenRef.current++  // invalidează orice gând în curs
     pendingMoveRef.current = null
     setGame(new Chess())
     setSelected(null)
@@ -261,26 +272,29 @@ export function useChessGame() {
     const newEngine = ENGINES.find(e => e.name === engineName)
     if (!newEngine || newEngine === engineWhite) return
 
-    engineWhite.destroy()
+    // Nu distruge dacă e aceeași instanță cu motorul negru — ar distruge și negrul
+    if (engineWhite !== engine) engineWhite.destroy()
     setEngineWhite(newEngine)
     setDiffWhiteIndex(0)
     resetState()
-  }, [engineWhite, resetState])
+  }, [engineWhite, engine, resetState])
 
   const handleEngineChange = useCallback((engineName: string) => {
     const newEngine = ENGINES.find(e => e.name === engineName)
     if (!newEngine || newEngine === engine) return
 
-    engine.destroy()
+    // Nu distruge dacă e aceeași instanță cu motorul alb
+    if (engine !== engineWhite) engine.destroy()
     setEngine(newEngine)
     setDifficultyIndex(0)
     resetState()
-  }, [engine, resetState])
+  }, [engine, engineWhite, resetState])
 
   // Undo în AI vs AI — revine o mutare, păstrează săgeata
   const handleUndoAiVsAi = useCallback(() => {
     if (history.length < 1 || thinking) return
     const prevFen = history[history.length - 1]
+    thinkingGenRef.current++  // invalidează orice gând în curs pentru poziția anterioară
     setGame(new Chess(prevFen))
     setHistory(prev => prev.slice(0, -1))
     setMoveHistory(prev => prev.slice(0, -1))
