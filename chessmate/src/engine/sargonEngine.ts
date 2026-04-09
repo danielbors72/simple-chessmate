@@ -11,7 +11,13 @@ const PIECE_VALUE: Record<string, number> = {
   p: 100, n: 300, b: 300, r: 500, q: 900, k: 10000,
 }
 
-// Evaluare Sargon: material + SOMA pe capturi posibile
+// Limită noduri pentru a preveni blocarea main thread-ului
+const MAX_NODES = 50_000
+let nodeCount = 0
+let searchAborted = false
+
+// Evaluare Sargon: material + controlul centrului
+// SOMA original (game.moves() la fiecare frunză) eliminat — prea scump pentru browser
 function evaluate(game: Chess): number {
   const board = game.board()
   const turn = game.turn()
@@ -36,27 +42,26 @@ function evaluate(game: Chess): number {
     }
   }
 
-  // SOMA: evaluăm schimburile favorabile
-  const moves = game.moves({ verbose: true })
-  for (const move of moves) {
-    if (move.captured) {
-      const gain = PIECE_VALUE[move.captured] - PIECE_VALUE[move.piece] / 10
-      if (gain > 0) score += Math.round(gain / 5)
-    }
-  }
-
   return score
 }
 
 // Alpha-beta 2-ply — exact ca Sargon I
 function alphabeta(game: Chess, depth: number, alpha: number, beta: number): number {
+  if (searchAborted) return 0
+
+  nodeCount++
+  if (nodeCount > MAX_NODES) {
+    searchAborted = true
+    return 0
+  }
+
   if (depth === 0) return evaluate(game)
   if (game.isCheckmate()) return -99999
   if (game.isDraw()) return 0
 
   const moves = game.moves({ verbose: true })
 
-  // Sargon ordona capturile primele (SOMA-informed)
+  // Sargon ordona capturile primele
   moves.sort((a, b) => {
     const sa = a.captured ? PIECE_VALUE[a.captured] : 0
     const sb = b.captured ? PIECE_VALUE[b.captured] : 0
@@ -64,6 +69,7 @@ function alphabeta(game: Chess, depth: number, alpha: number, beta: number): num
   })
 
   for (const move of moves) {
+    if (searchAborted) return alpha
     game.move(move)
     const score = -alphabeta(game, depth - 1, -beta, -alpha)
     game.undo()
@@ -89,6 +95,9 @@ class SargonEngineImpl implements ChessEngine {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         try {
+          nodeCount = 0
+          searchAborted = false
+
           const game = new Chess(fen)
           const moves = game.moves({ verbose: true })
           if (moves.length === 0) throw new Error('No legal moves')
@@ -104,6 +113,7 @@ class SargonEngineImpl implements ChessEngine {
           let bestScore = -Infinity
 
           for (const move of moves) {
+            if (searchAborted) break
             game.move(move)
             const score = -alphabeta(game, depth - 1, -Infinity, Infinity)
             game.undo()

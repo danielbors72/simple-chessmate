@@ -116,10 +116,6 @@ function evaluate(game: Chess): number {
     }
   }
 
-  // Bonus mobilitate — p4wn apreciază opțiunile
-  // Folosim numărul de mutări legale ca proxy
-  score += game.moves().length * 2
-
   return score
 }
 
@@ -132,13 +128,27 @@ function sortMoves(moves: Move[]): Move[] {
   })
 }
 
+// Limită noduri pentru a preveni blocarea main thread-ului
+const MAX_NODES = 80_000
+let nodeCount = 0
+let searchAborted = false
+
 function minimax(game: Chess, depth: number, alpha: number, beta: number): number {
+  if (searchAborted) return 0
+
+  nodeCount++
+  if (nodeCount > MAX_NODES) {
+    searchAborted = true
+    return 0
+  }
+
   if (depth === 0) return evaluate(game)
   if (game.isCheckmate()) return -99999
   if (game.isDraw()) return 0
 
   const moves = sortMoves(game.moves({ verbose: true }))
   for (const move of moves) {
+    if (searchAborted) return alpha
     game.move(move)
     const score = -minimax(game, depth - 1, -beta, -alpha)
     game.undo()
@@ -168,10 +178,14 @@ class P4wnEngineImpl implements ChessEngine {
           const moves = sortMoves(game.moves({ verbose: true }))
           if (moves.length === 0) throw new Error('No legal moves')
 
+          nodeCount = 0
+          searchAborted = false
+
           let bestMove = moves[0]
           let bestScore = -Infinity
 
           for (const move of moves) {
+            if (searchAborted) break
             game.move(move)
             const score = -minimax(game, depth - 1, -Infinity, Infinity)
             game.undo()
