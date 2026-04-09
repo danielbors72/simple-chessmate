@@ -171,38 +171,31 @@ class P4wnEngineImpl implements ChessEngine {
   async init(): Promise<void> {}
 
   async findBestMove(fen: string, depth: number): Promise<string> {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          const game = new Chess(fen)
-          const moves = sortMoves(game.moves({ verbose: true }))
-          if (moves.length === 0) throw new Error('No legal moves')
+    nodeCount = 0
+    searchAborted = false
 
-          nodeCount = 0
-          searchAborted = false
+    const game = new Chess(fen)
+    const moves = sortMoves(game.moves({ verbose: true }))
+    if (moves.length === 0) throw new Error('No legal moves')
 
-          let bestMove = moves[0]
-          let bestScore = -Infinity
+    let bestMove = moves[0]
+    let bestScore = -Infinity
 
-          for (const move of moves) {
-            if (searchAborted) break
-            game.move(move)
-            const score = -minimax(game, depth - 1, -Infinity, Infinity)
-            game.undo()
+    for (const move of moves) {
+      if (searchAborted) break
+      await new Promise(resolve => setTimeout(resolve, 0))
+      game.move(move)
+      const score = -minimax(game, depth - 1, -Infinity, Infinity)
+      game.undo()
 
-            // p4wn adaugă puțină randomizare la scoruri egale
-            if (score > bestScore || (score === bestScore && Math.random() < 0.3)) {
-              bestScore = score
-              bestMove = move
-            }
-          }
+      // p4wn adaugă puțină randomizare la scoruri egale
+      if (score > bestScore || (score === bestScore && Math.random() < 0.3)) {
+        bestScore = score
+        bestMove = move
+      }
+    }
 
-          resolve(bestMove.from + bestMove.to + (bestMove.promotion || ''))
-        } catch (e) {
-          reject(e)
-        }
-      }, 0)
-    })
+    return bestMove.from + bestMove.to + (bestMove.promotion || '')
   }
 
   destroy() {}

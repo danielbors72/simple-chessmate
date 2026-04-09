@@ -92,44 +92,37 @@ class SargonEngineImpl implements ChessEngine {
   async init(): Promise<void> {}
 
   async findBestMove(fen: string, depth: number): Promise<string> {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          nodeCount = 0
-          searchAborted = false
+    nodeCount = 0
+    searchAborted = false
 
-          const game = new Chess(fen)
-          const moves = game.moves({ verbose: true })
-          if (moves.length === 0) throw new Error('No legal moves')
+    const game = new Chess(fen)
+    const moves = game.moves({ verbose: true })
+    if (moves.length === 0) throw new Error('No legal moves')
 
-          // Sortare inițială — capturi primele
-          moves.sort((a, b) => {
-            const sa = a.captured ? PIECE_VALUE[a.captured] : 0
-            const sb = b.captured ? PIECE_VALUE[b.captured] : 0
-            return sb - sa
-          })
-
-          let bestMove = moves[0]
-          let bestScore = -Infinity
-
-          for (const move of moves) {
-            if (searchAborted) break
-            game.move(move)
-            const score = -alphabeta(game, depth - 1, -Infinity, Infinity)
-            game.undo()
-
-            if (score > bestScore) {
-              bestScore = score
-              bestMove = move
-            }
-          }
-
-          resolve(bestMove.from + bestMove.to + (bestMove.promotion || ''))
-        } catch (e) {
-          reject(e)
-        }
-      }, 0)
+    moves.sort((a, b) => {
+      const sa = a.captured ? PIECE_VALUE[a.captured] : 0
+      const sb = b.captured ? PIECE_VALUE[b.captured] : 0
+      return sb - sa
     })
+
+    let bestMove = moves[0]
+    let bestScore = -Infinity
+
+    for (const move of moves) {
+      if (searchAborted) break
+      // Cedează event loop-ul între fiecare mutare root — UI rămâne responsiv
+      await new Promise(resolve => setTimeout(resolve, 0))
+      game.move(move)
+      const score = -alphabeta(game, depth - 1, -Infinity, Infinity)
+      game.undo()
+
+      if (score > bestScore) {
+        bestScore = score
+        bestMove = move
+      }
+    }
+
+    return bestMove.from + bestMove.to + (bestMove.promotion || '')
   }
 
   destroy() {}

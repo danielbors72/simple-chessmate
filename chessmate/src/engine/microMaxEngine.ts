@@ -192,37 +192,30 @@ class MicroMaxEngineImpl implements ChessEngine {
   async init(): Promise<void> {}
 
   async findBestMove(fen: string, depth: number): Promise<string> {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          const game = new Chess(fen)
-          const moves = orderMoves(game.moves({ verbose: true }))
-          if (moves.length === 0) throw new Error('No legal moves')
+    nodeCount = 0
+    searchAborted = false
 
-          nodeCount = 0
-          searchAborted = false
+    const game = new Chess(fen)
+    const moves = orderMoves(game.moves({ verbose: true }))
+    if (moves.length === 0) throw new Error('No legal moves')
 
-          let bestMove = moves[0]
-          let bestScore = -Infinity
+    let bestMove = moves[0]
+    let bestScore = -Infinity
 
-          for (const move of moves) {
-            if (searchAborted) break
-            game.move(move)
-            const score = -negamax(game, depth - 1, -Infinity, Infinity)
-            game.undo()
+    for (const move of moves) {
+      if (searchAborted) break
+      await new Promise(resolve => setTimeout(resolve, 0))
+      game.move(move)
+      const score = -negamax(game, depth - 1, -Infinity, Infinity)
+      game.undo()
 
-            if (score > bestScore) {
-              bestScore = score
-              bestMove = move
-            }
-          }
+      if (score > bestScore) {
+        bestScore = score
+        bestMove = move
+      }
+    }
 
-          resolve(bestMove.from + bestMove.to + (bestMove.promotion || ''))
-        } catch (e) {
-          reject(e)
-        }
-      }, 0)
-    })
+    return bestMove.from + bestMove.to + (bestMove.promotion || '')
   }
 
   destroy() {}

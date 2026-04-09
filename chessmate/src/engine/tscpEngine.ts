@@ -243,60 +243,48 @@ class TscpEngineImpl implements ChessEngine {
   async init(): Promise<void> {}
 
   async findBestMove(fen: string, maxDepth: number): Promise<string> {
-    // setTimeout(0) cedează un frame UI înainte să blocăm main thread-ul
-    // Fără asta, apelul e async în nume dar sincron în realitate
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          // Resetăm contoarele pentru această căutare
-          nodeCount = 0
-          searchAborted = false
+    nodeCount = 0
+    searchAborted = false
 
-          const game = new Chess(fen)
-          const moves = orderMoves(game.moves({ verbose: true }))
-          if (moves.length === 0) throw new Error('No legal moves')
+    const game = new Chess(fen)
+    const moves = orderMoves(game.moves({ verbose: true }))
+    if (moves.length === 0) throw new Error('No legal moves')
 
-          let bestMove = moves[0]
+    let bestMove = moves[0]
 
-          // Iterative deepening: căutăm de la 1 la maxDepth
-          // La fiecare adâncime, cea mai bună mutare devine prima candidată la adâncimea următoare
-          for (let depth = 1; depth <= maxDepth; depth++) {
-            if (searchAborted) break  // limita de noduri atinsă — păstrăm bestMove de la adâncimea anterioară
+    // Iterative deepening: căutăm de la 1 la maxDepth
+    for (let depth = 1; depth <= maxDepth; depth++) {
+      if (searchAborted) break
 
-            let depthBestMove = moves[0]
-            let depthBestScore = -Infinity
+      // Cedează event loop-ul între fiecare adâncime — UI rămâne responsiv
+      await new Promise(resolve => setTimeout(resolve, 0))
 
-            for (const move of moves) {
-              game.move(move)
-              const score = -alphabeta(game, depth - 1, -Infinity, Infinity)
-              game.undo()
+      let depthBestMove = moves[0]
+      let depthBestScore = -Infinity
 
-              if (score > depthBestScore) {
-                depthBestScore = score
-                depthBestMove = move
-              }
-            }
+      for (const move of moves) {
+        game.move(move)
+        const score = -alphabeta(game, depth - 1, -Infinity, Infinity)
+        game.undo()
 
-            if (!searchAborted) {
-              // Actualizăm bestMove doar dacă căutarea s-a terminat complet la această adâncime
-              bestMove = depthBestMove
-
-              // Mutăm cea mai bună mutare la începutul listei pentru adâncimea următoare
-              // Asta îmbunătățește cutoff-urile alpha-beta la adâncimi mai mari
-              const idx = moves.indexOf(bestMove)
-              if (idx > 0) {
-                moves.splice(idx, 1)
-                moves.unshift(bestMove)
-              }
-            }
-          }
-
-          resolve(bestMove.from + bestMove.to + (bestMove.promotion || ''))
-        } catch (e) {
-          reject(e)
+        if (score > depthBestScore) {
+          depthBestScore = score
+          depthBestMove = move
         }
-      }, 0)
-    })
+      }
+
+      if (!searchAborted) {
+        bestMove = depthBestMove
+
+        const idx = moves.indexOf(bestMove)
+        if (idx > 0) {
+          moves.splice(idx, 1)
+          moves.unshift(bestMove)
+        }
+      }
+    }
+
+    return bestMove.from + bestMove.to + (bestMove.promotion || '')
   }
 
   destroy() {}
