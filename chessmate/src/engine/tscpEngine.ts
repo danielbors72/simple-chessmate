@@ -172,8 +172,16 @@ function orderMoves(moves: Move[]): Move[] {
   })
 }
 
+// Limită noduri pentru a preveni blocarea main thread-ului
+// La depth 7, TSCP poate explora milioane de noduri → freeze complet
+const MAX_NODES = 80_000
+let nodeCount = 0
+let searchAborted = false
+
 // Quiescence search — continuă căutarea pe capturi pentru a evita horizon effect
 function quiescence(game: Chess, alpha: number, beta: number): number {
+  if (searchAborted) return 0
+
   const stand = evaluate(game)
   if (stand >= beta) return beta
   if (stand > alpha) alpha = stand
@@ -182,6 +190,7 @@ function quiescence(game: Chess, alpha: number, beta: number): number {
   const sorted = orderMoves(captures)
 
   for (const move of sorted) {
+    if (searchAborted) return alpha
     game.move(move)
     const score = -quiescence(game, -beta, -alpha)
     game.undo()
@@ -194,6 +203,14 @@ function quiescence(game: Chess, alpha: number, beta: number): number {
 
 // Alpha-beta cu negamax — algoritmul central TSCP
 function alphabeta(game: Chess, depth: number, alpha: number, beta: number): number {
+  if (searchAborted) return 0
+
+  nodeCount++
+  if (nodeCount > MAX_NODES) {
+    searchAborted = true
+    return 0
+  }
+
   if (depth === 0) return quiescence(game, alpha, beta)
   if (game.isCheckmate()) return -99999
   if (game.isDraw()) return 0
@@ -201,6 +218,7 @@ function alphabeta(game: Chess, depth: number, alpha: number, beta: number): num
   const moves = orderMoves(game.moves({ verbose: true }))
 
   for (const move of moves) {
+    if (searchAborted) return alpha
     game.move(move)
     const score = -alphabeta(game, depth - 1, -beta, -alpha)
     game.undo()
@@ -225,41 +243,60 @@ class TscpEngineImpl implements ChessEngine {
   async init(): Promise<void> {}
 
   async findBestMove(fen: string, maxDepth: number): Promise<string> {
-    const game = new Chess(fen)
-    const moves = orderMoves(game.moves({ verbose: true }))
-    if (moves.length === 0) throw new Error('No legal moves')
+    // setTimeout(0) cedează un frame UI înainte să blocăm main thread-ul
+    // Fără asta, apelul e async în nume dar sincron în realitate
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        try {
+          // Resetăm contoarele pentru această căutare
+          nodeCount = 0
+          searchAborted = false
 
-    let bestMove = moves[0]
+          const game = new Chess(fen)
+          const moves = orderMoves(game.moves({ verbose: true }))
+          if (moves.length === 0) throw new Error('No legal moves')
 
-    // Iterative deepening: căutăm de la 1 la maxDepth
-    // La fiecare adâncime, cea mai bună mutare devine prima candidată la adâncimea următoare
-    for (let depth = 1; depth <= maxDepth; depth++) {
-      let depthBestMove = moves[0]
-      let depthBestScore = -Infinity
+          let bestMove = moves[0]
 
-      for (const move of moves) {
-        game.move(move)
-        const score = -alphabeta(game, depth - 1, -Infinity, Infinity)
-        game.undo()
+          // Iterative deepening: căutăm de la 1 la maxDepth
+          // La fiecare adâncime, cea mai bună mutare devine prima candidată la adâncimea următoare
+          for (let depth = 1; depth <= maxDepth; depth++) {
+            if (searchAborted) break  // limita de noduri atinsă — păstrăm bestMove de la adâncimea anterioară
 
-        if (score > depthBestScore) {
-          depthBestScore = score
-          depthBestMove = move
+            let depthBestMove = moves[0]
+            let depthBestScore = -Infinity
+
+            for (const move of moves) {
+              game.move(move)
+              const score = -alphabeta(game, depth - 1, -Infinity, Infinity)
+              game.undo()
+
+              if (score > depthBestScore) {
+                depthBestScore = score
+                depthBestMove = move
+              }
+            }
+
+            if (!searchAborted) {
+              // Actualizăm bestMove doar dacă căutarea s-a terminat complet la această adâncime
+              bestMove = depthBestMove
+
+              // Mutăm cea mai bună mutare la începutul listei pentru adâncimea următoare
+              // Asta îmbunătățește cutoff-urile alpha-beta la adâncimi mai mari
+              const idx = moves.indexOf(bestMove)
+              if (idx > 0) {
+                moves.splice(idx, 1)
+                moves.unshift(bestMove)
+              }
+            }
+          }
+
+          resolve(bestMove.from + bestMove.to + (bestMove.promotion || ''))
+        } catch (e) {
+          reject(e)
         }
-      }
-
-      bestMove = depthBestMove
-
-      // Mutăm cea mai bună mutare la începutul listei pentru adâncimea următoare
-      // Asta îmbunătățește cutoff-urile alpha-beta la adâncimi mai mari
-      const idx = moves.indexOf(bestMove)
-      if (idx > 0) {
-        moves.splice(idx, 1)
-        moves.unshift(bestMove)
-      }
-    }
-
-    return bestMove.from + bestMove.to + (bestMove.promotion || '')
+      }, 0)
+    })
   }
 
   destroy() {}
