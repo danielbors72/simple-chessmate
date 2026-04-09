@@ -98,22 +98,23 @@ export function useChessGame() {
     const move = game.move({ from, to, promotion: promoType })
     if (!move) return false
 
-    const duration = isPlayer ? 1000 : 500
-
-    setAnimating({
-      pieceCode,
-      fromCol: fromGrid.col, fromRow: fromGrid.row,
-      toCol: toGrid.col, toRow: toGrid.row,
-      duration,
-    })
-
     const arrow: LastMove = { from, to }
     setHistory(prev => [...prev, fenBefore])
     setMoveHistory(prev => [...prev, lastMove])
     setLastMove(arrow)
     setGame(new Chess(game.fen()))
 
-    setTimeout(() => setAnimating(null), duration)
+    // Mutarea jucătorului: fără animație — jucătorul deja știe unde mută
+    // Mutarea AI: animație 500ms ca să fie ușor de urmărit
+    if (!isPlayer) {
+      setAnimating({
+        pieceCode,
+        fromCol: fromGrid.col, fromRow: fromGrid.row,
+        toCol: toGrid.col, toRow: toGrid.row,
+        duration: 500,
+      })
+      setTimeout(() => setAnimating(null), 500)
+    }
     return true
   }, [game])
 
