@@ -23,15 +23,16 @@ const PIECE_IMAGES: Record<string, string> = {
 
 type PieceProps = {
   type: string  // "wK", "bP", etc.
+  isLifted?: boolean
 }
 
-function Piece({ type }: PieceProps) {
+function Piece({ type, isLifted }: PieceProps) {
   const src = PIECE_IMAGES[type]
   if (!src) return null
 
   return (
     <img
-      className="piece"
+      className={`piece${isLifted ? ' lifted' : ''}`}
       src={src}
       alt={type}
       draggable={false}

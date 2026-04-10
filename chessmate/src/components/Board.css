@@ -31,6 +31,13 @@
   user-select: none;
   pointer-events: none;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+/* Piesa ridicată — mai mică + umbră pronunțată (efect de elevare) */
+.piece.lifted {
+  transform: scale(0.82);
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
 }
 
 /* Culorile tablei — alb + albastru deschis */
@@ -137,4 +144,55 @@
 .animating-piece .piece {
   width: 88%;
   height: 88%;
+}
+
+/* Piesa trasă — urmărește cursorul, centrată, ridicată vizual */
+.drag-piece {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.drag-piece .piece {
+  width: 100%;
+  height: 100%;
+  transform: scale(0.82);
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.35));
+  transition: none;
+}
+
+/* Piesa care se întoarce la origine (drop invalid) */
+.returning-piece {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  left: var(--from-x);
+  top: var(--from-y);
+  transition: none;
+}
+
+.returning-piece.return-to {
+  left: var(--to-x);
+  top: var(--to-y);
+  transition: left 0.25s ease-out, top 0.25s ease-out;
+}
+
+.returning-piece .piece {
+  width: 100%;
+  height: 100%;
+  transform: scale(0.82);
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.35));
+  transition: none;
 }

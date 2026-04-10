@@ -53,6 +53,7 @@ export function useChessGame() {
   const [thinking, setThinking] = useState(false)
   const [lastMove, setLastMove] = useState<LastMove>(null)
   const [animating, setAnimating] = useState<AnimatingPiece>(null)
+  const [lifted, setLifted] = useState<string | null>(null)
 
   // Mod de joc: om vs motor sau motor vs motor
   const [gameMode, setGameMode] = useState<GameMode>('human-vs-ai')
@@ -233,6 +234,7 @@ export function useChessGame() {
     thinkingGenRef.current++  // invalidează orice gând în curs
     pendingMoveRef.current = null
     setGame(new Chess())
+    setLifted(null)
     setSelected(null)
     setLegalMoves([])
     setHistory([])
@@ -328,6 +330,37 @@ export function useChessGame() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [gameMode, gameOver])
 
+  // Ridicare piesă — setează lifted + selected + legalMoves
+  const liftPiece = useCallback((position: string): boolean => {
+    if (gameMode === 'ai-vs-ai') return false
+    if (gameOver || !isPlayerTurn || thinking || animating) return false
+    if (lifted) return false
+
+    const piece = game.get(position as Sq)
+    if (!piece || piece.color !== 'w') return false
+
+    const moves = game.moves({ square: position as Sq, verbose: true })
+    if (moves.length === 0) return false
+
+    setLifted(position)
+    setSelected(position)
+    setLegalMoves(moves.map(m => m.to))
+    return true
+  }, [game, lifted, gameMode, gameOver, isPlayerTurn, thinking, animating])
+
+  // Amplasare piesă ridicată pe un pătrat legal
+  const placePiece = useCallback((position: string): boolean => {
+    if (!lifted || !legalMoves.includes(position)) return false
+
+    const success = executeMove(lifted, position, undefined, true)
+    if (success) {
+      setLifted(null)
+      setSelected(null)
+      setLegalMoves([])
+    }
+    return success
+  }, [lifted, legalMoves, executeMove])
+
   const handleSquareClick = useCallback((position: string) => {
     // În AI vs AI, click pe tablă = următoarea mutare
     if (gameMode === 'ai-vs-ai') {
@@ -336,28 +369,18 @@ export function useChessGame() {
     }
     if (gameOver || !isPlayerTurn || thinking || animating) return
 
-    if (selected && legalMoves.includes(position)) {
-      executeMove(selected, position, undefined, true)
-      setSelected(null)
-      setLegalMoves([])
+    // Piesa ridicată — doar placement pe mutare legală
+    if (lifted) {
+      if (legalMoves.includes(position)) {
+        placePiece(position)
+      }
+      // Nu deselectăm — piesa rămâne ridicată
       return
     }
 
-    const piece = game.get(position as Sq)
-    if (piece && piece.color === 'w') {
-      const moves = game.moves({ square: position as Sq, verbose: true })
-      if (moves.length > 0) {
-        setSelected(position)
-        setLegalMoves(moves.map(m => m.to))
-      } else {
-        setSelected(null)
-        setLegalMoves([])
-      }
-    } else {
-      setSelected(null)
-      setLegalMoves([])
-    }
-  }, [game, selected, legalMoves, gameOver, isPlayerTurn, thinking, animating, executeMove])
+    // Ridicare piesă (click simplu)
+    liftPiece(position)
+  }, [gameMode, gameOver, isPlayerTurn, thinking, animating, lifted, legalMoves, liftPiece, placePiece])
 
   const handleNewGame = useCallback(() => {
     resetState()
@@ -403,6 +426,9 @@ export function useChessGame() {
     canUndoAiVsAi: history.length >= 1 && !thinking,
 
     // Handlers
+    lifted,
+    liftPiece,
+    placePiece,
     handleSquareClick,
     handleNewGame,
     handleUndo,

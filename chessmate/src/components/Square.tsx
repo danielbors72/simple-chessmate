@@ -9,10 +9,11 @@ type SquareProps = {
   isSelected?: boolean
   isLegalMove?: boolean
   isInCheck?: boolean
+  isLifted?: boolean
   onClick?: () => void
 }
 
-function Square({ isLight, position, piece, isSelected, isLegalMove, isInCheck, onClick }: SquareProps) {
+function Square({ isLight, position, piece, isSelected, isLegalMove, isInCheck, isLifted, onClick }: SquareProps) {
   let className = `square ${isLight ? 'light' : 'dark'}`
   if (isSelected) className += ' selected'
   if (isLegalMove) className += ' legal-move'
@@ -31,7 +32,7 @@ function Square({ isLight, position, piece, isSelected, isLegalMove, isInCheck, 
     >
       {showRank && <span className="coord coord-rank">{rank}</span>}
       {showFile && <span className="coord coord-file">{file}</span>}
-      {piece && <Piece type={piece} />}
+      {piece && <Piece type={piece} isLifted={isLifted} />}
       {isLegalMove && !piece && <div className="move-dot" />}
       {isLegalMove && piece && <div className="capture-ring" />}
     </div>
